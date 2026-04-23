@@ -13,11 +13,14 @@
         <File path="src/lvds_tx_ctrl/lvds_7_to_1_tx.v" type="file.verilog" enable="1"/>
         <File path="src/lvds_tx_ctrl/rgb_2_lvds.v" type="file.verilog" enable="1"/>
         <File path="src/pll_init.v" type="file.verilog" enable="1"/>
+        <File path="src/reset_gen.v" type="file.verilog" enable="1"/>
         <File path="src/serdes/roralink_8b10b/roralink_8b10b.v" type="file.verilog" enable="1"/>
         <File path="src/serdes/serdes.v" type="file.verilog" enable="1"/>
         <File path="src/testpattern.v" type="file.verilog" enable="1"/>
         <File path="src/top.v" type="file.verilog" enable="1"/>
+        <File path="src/video_symbol_packer_v1.v" type="file.verilog" enable="1"/>
+        <File path="src/video_symbol_unpacker_v1.v" type="file.verilog" enable="1"/>
         <File path="src/fpga_project.cst" type="file.cst" enable="1"/>
-        <File path="src/fpga_project.rao" type="file.gao" enable="1"/>
+        <File path="src/fpga_project.rao" type="file.gao" enable="0"/>
     </FileList>
 </Project>
