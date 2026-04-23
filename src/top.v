@@ -18,10 +18,9 @@ module top
     //==========================================================================
     // 参数
     //==========================================================================
-    localparam [31:0] T1S               = 32'd69_999_999;
-    localparam [15:0] RX_PREFILL_CYCLES = 16'd1024;
+    localparam [31:0] T1S = 32'd69_999_999;
 
-    // 1024x600 timing（沿用你现在点亮的屏参）
+    // 1024x600 timing（保持你现有本地点屏）
     localparam [11:0] C_H_TOTAL  = 12'd1344;
     localparam [11:0] C_H_SYNC   = 12'd24;
     localparam [11:0] C_H_BPORCH = 12'd160;
@@ -32,56 +31,58 @@ module top
     localparam [11:0] C_V_BPORCH = 12'd23;
     localparam [11:0] C_V_RES    = 12'd600;
 
+    // 用 0x96 做头字节，便于看 bit 顺序/错码
+    localparam [7:0]  C_TX_HDR   = 8'h96;
+
     //==========================================================================
     // 1) LVDS pixel clock
     //==========================================================================
-    wire        lvds_eclk;
-    wire        pixclk;
-    wire        pll_lock;
+    wire lvds_eclk;
+    wire pixclk;
+    wire pll_lock;
 
     Gowin_PLL u_PLL_LVDS_TX
     (
-        .clkin      (clk        ),
-        .clkout0    (lvds_eclk  ),
-        .lock       (pll_lock   ),
-        .mdclk      (clk        ),
-        .reset      (!rst_n     )
+        .clkin      (clk),
+        .clkout0    (lvds_eclk),
+        .lock       (pll_lock),
+        .mdclk      (clk),
+        .reset      (!rst_n)
     );
 
     CLKDIV CLKDIV_inst
     (
-        .RESETN     (rst_n      ),
-        .HCLKIN     (lvds_eclk  ),
-        .CALIB      (1'b0       ),
-        .CLKOUT     (pixclk     )
+        .RESETN     (rst_n),
+        .HCLKIN     (lvds_eclk),
+        .CALIB      (1'b0),
+        .CLKOUT     (pixclk)
     );
     defparam CLKDIV_inst.DIV_MODE = "3.5";
 
-    // pixel domain reset
     wire pixel_rst;
     wire pixel_rst_n;
 
     reset_gen u_pixel_reset_gen
     (
-        .i_clk1     (pixclk          ),
+        .i_clk1     (pixclk),
         .i_lock     (pll_lock & rst_n),
-        .o_rst1     (pixel_rst       )
+        .o_rst1     (pixel_rst)
     );
 
     assign pixel_rst_n = ~pixel_rst;
 
     //==========================================================================
-    // 2) 本地 testpattern
+    // 2) 本地 testpattern（仅保留本地点屏）
     //==========================================================================
-    reg  [31:0] count;
-    reg  [2:0]  col_cnt;
+    reg [31:0] count;
+    reg [2:0]  col_cnt;
 
-    wire [7:0]  tp_r;
-    wire [7:0]  tp_g;
-    wire [7:0]  tp_b;
-    wire        tp_de;
-    wire        tp_hs;
-    wire        tp_vs;
+    wire [7:0] tp_r;
+    wire [7:0] tp_g;
+    wire [7:0] tp_b;
+    wire       tp_de;
+    wire       tp_hs;
+    wire       tp_vs;
 
     always @(posedge clk or negedge rst_n) begin
         if(!rst_n)
@@ -101,64 +102,32 @@ module top
 
     testpattern testpattern_inst
     (
-        .I_pxl_clk   (pixclk      ),
-        .I_rst_n     (pixel_rst_n ),
-        .I_mode      (col_cnt     ),
-        .I_single_r  (8'd0        ),
-        .I_single_g  (8'd0        ),
-        .I_single_b  (8'd255      ),
-        .I_h_total   (C_H_TOTAL   ),
-        .I_h_sync    (C_H_SYNC    ),
-        .I_h_bporch  (C_H_BPORCH  ),
-        .I_h_res     (C_H_RES     ),
-        .I_v_total   (C_V_TOTAL   ),
-        .I_v_sync    (C_V_SYNC    ),
-        .I_v_bporch  (C_V_BPORCH  ),
-        .I_v_res     (C_V_RES     ),
-        .I_hs_pol    (1'b1        ),
-        .I_vs_pol    (1'b1        ),
-        .O_de        (tp_de       ),
-        .O_hs        (tp_hs       ),
-        .O_vs        (tp_vs       ),
-        .O_data_r    (tp_r        ),
-        .O_data_g    (tp_g        ),
-        .O_data_b    (tp_b        )
+        .I_pxl_clk   (pixclk),
+        .I_rst_n     (pixel_rst_n),
+        .I_mode      (col_cnt),
+        .I_single_r  (8'd0),
+        .I_single_g  (8'd0),
+        .I_single_b  (8'd255),
+        .I_h_total   (C_H_TOTAL),
+        .I_h_sync    (C_H_SYNC),
+        .I_h_bporch  (C_H_BPORCH),
+        .I_h_res     (C_H_RES),
+        .I_v_total   (C_V_TOTAL),
+        .I_v_sync    (C_V_SYNC),
+        .I_v_bporch  (C_V_BPORCH),
+        .I_v_res     (C_V_RES),
+        .I_hs_pol    (1'b1),
+        .I_vs_pol    (1'b1),
+        .O_de        (tp_de),
+        .O_hs        (tp_hs),
+        .O_vs        (tp_vs),
+        .O_data_r    (tp_r),
+        .O_data_g    (tp_g),
+        .O_data_b    (tp_b)
     );
 
     //==========================================================================
-    // 3) TX: packer -> TX FIFO -> SerDes
-    //==========================================================================
-    wire [31:0] tx_stream_word_data;
-    wire        tx_stream_word_valid;
-    wire        tx_stream_overflow_sticky;
-
-    wire [35:0] tx_fifo_din;
-    wire [35:0] tx_fifo_dout;
-    wire        tx_fifo_wr_en;
-    wire        tx_fifo_rd_en;
-    wire        tx_fifo_empty;
-    wire        tx_fifo_full;
-
-    assign tx_fifo_din   = {4'b0000, tx_stream_word_data};
-    assign tx_fifo_wr_en = tx_stream_word_valid & (~tx_fifo_full);
-
-    video_symbol_packer_v1 u_video_symbol_packer_v1
-    (
-        .i_clk              (pixclk                  ),
-        .i_rst_n            (pixel_rst_n             ),
-        .i_enable           (1'b1                    ),
-        .i_vs               (tp_vs                   ),
-        .i_hs               (tp_hs                   ),
-        .i_de               (tp_de                   ),
-        .i_rgb              ({tp_r, tp_g, tp_b}     ),
-        .i_word_ready       (~tx_fifo_full           ),
-        .o_word_data        (tx_stream_word_data     ),
-        .o_word_valid       (tx_stream_word_valid    ),
-        .o_overflow_sticky  (tx_stream_overflow_sticky)
-    );
-
-    //==========================================================================
-    // 4) SerDes user interface / clocks / status
+    // 3) SerDes 接口与状态
     //==========================================================================
     wire [31:0] user_tx_data;
     wire        user_tx_valid;
@@ -182,132 +151,66 @@ module top
     wire        link_reset_unused;
     wire        sys_reset_unused;
 
-    wire        sys_clk;
-    wire        sys_rst;
-    wire        sys_rst_n;
+    wire        tx_clk;
+    wire        rx_clk;
+    wire        tx_rst;
+    wire        tx_rst_n;
+    wire        rx_rst;
+    wire        rx_rst_n;
 
     wire        gt_reset;
     wire        gt_pcs_tx_reset;
     wire        gt_pcs_rx_reset;
 
-    assign sys_clk          = gt_pcs_tx_clk;
-    assign gt_reset         = 1'b0;
-    assign gt_pcs_tx_reset  = 1'b0;
-    assign gt_pcs_rx_reset  = 1'b0;
+    assign tx_clk          = gt_pcs_tx_clk;
+    assign rx_clk          = gt_pcs_rx_clk;
+    assign gt_reset        = 1'b0;
+    assign gt_pcs_tx_reset = 1'b0;
+    assign gt_pcs_rx_reset = 1'b0;
 
-    reset_gen u_sys_reset_gen
+    reset_gen u_tx_reset_gen
     (
-        .i_clk1     (sys_clk                    ),
+        .i_clk1     (tx_clk),
         .i_lock     (rst_n & pll_lock & gt_pll_ok),
-        .o_rst1     (sys_rst                    )
+        .o_rst1     (tx_rst)
     );
+    assign tx_rst_n = ~tx_rst;
 
-    assign sys_rst_n = ~sys_rst;
-
-    assign user_tx_data  = tx_fifo_dout[31:0];
-    assign user_tx_valid = ~tx_fifo_empty;
-    assign tx_fifo_rd_en = user_tx_ready & (~tx_fifo_empty);
+    reset_gen u_rx_reset_gen
+    (
+        .i_clk1     (rx_clk),
+        .i_lock     (rst_n & pll_lock & gt_pll_ok),
+        .o_rst1     (rx_rst)
+    );
+    assign rx_rst_n = ~rx_rst;
 
     SerDes_Top u_SerDes_Top
     (
-        .RoraLink_8B10B_Top_link_reset_o          (link_reset_unused ),
-        .RoraLink_8B10B_Top_sys_reset_o           (sys_reset_unused  ),
-        .RoraLink_8B10B_Top_user_tx_ready_o       (user_tx_ready     ),
-        .RoraLink_8B10B_Top_user_rx_data_o        (user_rx_data      ),
-        .RoraLink_8B10B_Top_user_rx_valid_o       (user_rx_valid     ),
-        .RoraLink_8B10B_Top_hard_err_o            (hard_err          ),
-        .RoraLink_8B10B_Top_soft_err_o            (soft_err          ),
-        .RoraLink_8B10B_Top_channel_up_o          (channel_up        ),
-        .RoraLink_8B10B_Top_lane_up_o             (lane_up           ),
-        .RoraLink_8B10B_Top_gt_pcs_tx_clk_o       (gt_pcs_tx_clk     ),
-        .RoraLink_8B10B_Top_gt_pcs_rx_clk_o       (gt_pcs_rx_clk     ),
-        .RoraLink_8B10B_Top_gt_pll_lock_o         (gt_pll_ok         ),
-        .RoraLink_8B10B_Top_gt_rx_align_link_o    (gt_rx_align_link  ),
-        .RoraLink_8B10B_Top_gt_rx_pma_lock_o      (gt_rx_pma_lock    ),
-        .RoraLink_8B10B_Top_gt_rx_k_lock_o        (gt_rx_k_lock      ),
+        .RoraLink_8B10B_Top_link_reset_o          (link_reset_unused),
+        .RoraLink_8B10B_Top_sys_reset_o           (sys_reset_unused),
+        .RoraLink_8B10B_Top_user_tx_ready_o       (user_tx_ready),
+        .RoraLink_8B10B_Top_user_rx_data_o        (user_rx_data),
+        .RoraLink_8B10B_Top_user_rx_valid_o       (user_rx_valid),
+        .RoraLink_8B10B_Top_hard_err_o            (hard_err),
+        .RoraLink_8B10B_Top_soft_err_o            (soft_err),
+        .RoraLink_8B10B_Top_channel_up_o          (channel_up),
+        .RoraLink_8B10B_Top_lane_up_o             (lane_up),
+        .RoraLink_8B10B_Top_gt_pcs_tx_clk_o       (gt_pcs_tx_clk),
+        .RoraLink_8B10B_Top_gt_pcs_rx_clk_o       (gt_pcs_rx_clk),
+        .RoraLink_8B10B_Top_gt_pll_lock_o         (gt_pll_ok),
+        .RoraLink_8B10B_Top_gt_rx_align_link_o    (gt_rx_align_link),
+        .RoraLink_8B10B_Top_gt_rx_pma_lock_o      (gt_rx_pma_lock),
+        .RoraLink_8B10B_Top_gt_rx_k_lock_o        (gt_rx_k_lock),
 
-        .RoraLink_8B10B_Top_user_clk_i            (sys_clk           ),
-        .RoraLink_8B10B_Top_init_clk_i            (clk               ),
-        .RoraLink_8B10B_Top_reset_i               (sys_rst           ),
-        .RoraLink_8B10B_Top_user_pll_locked_i     (gt_pll_ok         ),
-        .RoraLink_8B10B_Top_user_tx_data_i        (user_tx_data      ),
-        .RoraLink_8B10B_Top_user_tx_valid_i       (user_tx_valid     ),
-        .RoraLink_8B10B_Top_gt_reset_i            (gt_reset          ),
-        .RoraLink_8B10B_Top_gt_pcs_tx_reset_i     (gt_pcs_tx_reset   ),
-        .RoraLink_8B10B_Top_gt_pcs_rx_reset_i     (gt_pcs_rx_reset   )
-    );
-
-    //==========================================================================
-    // 5) RX: SerDes -> RX FIFO -> unpacker
-    //==========================================================================
-    wire [35:0] rx_fifo_din;
-    wire [35:0] rx_fifo_dout;
-    wire        rx_fifo_wr_en;
-    wire        rx_fifo_rd_en;
-    wire        rx_fifo_empty;
-    wire        rx_fifo_full;
-
-    wire        rx_sym_valid;
-    wire        rx_sym_vs;
-    wire        rx_sym_hs;
-    wire        rx_sym_de;
-    wire [23:0] rx_sym_rgb;
-    wire        rx_stream_underflow_sticky;
-
-    assign rx_fifo_din   = {4'b0000, user_rx_data};
-    assign rx_fifo_wr_en = user_rx_valid & (~rx_fifo_full);
-
-    video_symbol_unpacker_v1 u_video_symbol_unpacker_v1
-    (
-        .i_clk              (pixclk                     ),
-        .i_rst_n            (pixel_rst_n                ),
-        .i_fifo_dout        (rx_fifo_dout[31:0]         ),
-        .i_fifo_empty       (rx_fifo_empty              ),
-        .o_fifo_rd_en       (rx_fifo_rd_en              ),
-        .i_video_ready      (rx_read_enable_pclk        ),
-        .o_valid            (rx_sym_valid               ),
-        .o_vs               (rx_sym_vs                  ),
-        .o_hs               (rx_sym_hs                  ),
-        .o_de               (rx_sym_de                  ),
-        .o_rgb              (rx_sym_rgb                 ),
-        .o_underflow_sticky (rx_stream_underflow_sticky )
-    );
-
-    //==========================================================================
-    // 6) pixel 域：链路同步、RX 预填充、收到 VS 后切显示
-    //==========================================================================
-    wire fifo_rst;
-    assign fifo_rst = (!rst_n) | pixel_rst | sys_rst;
-
-    fifo_top_tx36x4096 u_fifo_top_tx36x4096
-    (
-        .Data           (tx_fifo_din   ),
-        .Reset          (fifo_rst      ),
-        .WrClk          (pixclk        ),
-        .RdClk          (sys_clk       ),
-        .WrEn           (tx_fifo_wr_en ),
-        .RdEn           (tx_fifo_rd_en ),
-        .Rnum           (             ),
-        .Almost_Empty   (             ),
-        .Almost_Full    (             ),
-        .Q              (tx_fifo_dout  ),
-        .Empty          (tx_fifo_empty ),
-        .Full           (tx_fifo_full  )
-    );
-
-    fifo_top_rx36x4096 u_fifo_top_rx36x4096
-    (
-        .Data           (rx_fifo_din   ),
-        .Reset          (fifo_rst      ),
-        .WrClk          (sys_clk       ),
-        .RdClk          (pixclk        ),
-        .WrEn           (rx_fifo_wr_en ),
-        .RdEn           (rx_fifo_rd_en ),
-        .Almost_Empty   (             ),
-        .Almost_Full    (             ),
-        .Q              (rx_fifo_dout  ),
-        .Empty          (rx_fifo_empty ),
-        .Full           (rx_fifo_full  )
+        .RoraLink_8B10B_Top_user_clk_i            (tx_clk),
+        .RoraLink_8B10B_Top_init_clk_i            (clk),
+        .RoraLink_8B10B_Top_reset_i               (tx_rst),
+        .RoraLink_8B10B_Top_user_pll_locked_i     (gt_pll_ok),
+        .RoraLink_8B10B_Top_user_tx_data_i        (user_tx_data),
+        .RoraLink_8B10B_Top_user_tx_valid_i       (user_tx_valid),
+        .RoraLink_8B10B_Top_gt_reset_i            (gt_reset),
+        .RoraLink_8B10B_Top_gt_pcs_tx_reset_i     (gt_pcs_tx_reset),
+        .RoraLink_8B10B_Top_gt_pcs_rx_reset_i     (gt_pcs_rx_reset)
     );
 
     wire serdes_link_ok;
@@ -319,96 +222,125 @@ module top
         gt_rx_pma_lock   &
         gt_rx_k_lock;
 
-    reg         link_ok_meta_pclk;
-    reg         link_ok_pclk;
-    reg         link_ok_pclk_d;
-    reg [15:0]  rx_prefill_cnt;
-    reg         rx_read_enable_pclk;
-    reg         rx_stream_enable_pclk;
-    reg         rx_sym_vs_d;
+    //==========================================================================
+    // 4) TX 域：发送固定头 + 24bit 递增计数
+    //==========================================================================
+    reg  [23:0] tx_cnt;
+    reg  [31:0] tx_last_fire_data;
+    reg         tx_seen_sticky;
 
-    wire rx_vs_rise_pclk;
+    assign user_tx_data  = {C_TX_HDR, tx_cnt};
+    assign user_tx_valid = tx_rst_n;
 
-    assign rx_vs_rise_pclk = (~rx_sym_vs_d) & rx_sym_vs & rx_sym_valid;
-
-    always @(posedge pixclk or negedge pixel_rst_n) begin
-        if(!pixel_rst_n) begin
-            link_ok_meta_pclk      <= 1'b0;
-            link_ok_pclk           <= 1'b0;
-            link_ok_pclk_d         <= 1'b0;
-            rx_prefill_cnt         <= 16'd0;
-            rx_read_enable_pclk    <= 1'b0;
-            rx_stream_enable_pclk  <= 1'b0;
-            rx_sym_vs_d            <= 1'b0;
+    always @(posedge tx_clk or negedge tx_rst_n) begin
+        if(!tx_rst_n) begin
+            tx_cnt            <= 24'd0;
+            tx_last_fire_data <= 32'd0;
+            tx_seen_sticky    <= 1'b0;
         end
         else begin
-            link_ok_meta_pclk <= serdes_link_ok;
-            link_ok_pclk      <= link_ok_meta_pclk;
-            link_ok_pclk_d    <= link_ok_pclk;
-
-            rx_sym_vs_d <= rx_sym_vs;
-
-            if(!link_ok_pclk) begin
-                rx_prefill_cnt        <= 16'd0;
-                rx_read_enable_pclk   <= 1'b0;
-                rx_stream_enable_pclk <= 1'b0;
-            end
-            else begin
-                if(!rx_read_enable_pclk) begin
-                    if(rx_prefill_cnt < RX_PREFILL_CYCLES)
-                        rx_prefill_cnt <= rx_prefill_cnt + 16'd1;
-                    else
-                        rx_read_enable_pclk <= 1'b1;
-                end
-
-                if(rx_read_enable_pclk && rx_vs_rise_pclk)
-                    rx_stream_enable_pclk <= 1'b1;
+            if(user_tx_valid && user_tx_ready) begin
+                tx_last_fire_data <= {C_TX_HDR, tx_cnt};
+                tx_cnt            <= tx_cnt + 24'd1;
+                tx_seen_sticky    <= 1'b1;
             end
         end
     end
 
     //==========================================================================
-    // 7) LVDS 输出：未锁流前显示本地蓝底 timing，锁流后显示回环图
+    // 5) RX 域：只在 rx_clk 域检查收到的数据
     //==========================================================================
-    wire        out_vs;
-    wire        out_hs;
-    wire        out_de;
-    wire [23:0] out_rgb;
+    reg  [31:0] rx_last_data;
+    reg  [23:0] rx_expected_cnt;
+    reg         rx_seen_sticky;
+    reg         rx_lock_sticky;
+    reg         rx_match_pulse;
+    reg         rx_mismatch_sticky;
+    reg         rx_header_err_sticky;
+    reg         hard_err_sticky_rx;
+    reg         soft_err_sticky_rx;
 
-    assign out_vs  = rx_stream_enable_pclk ? rx_sym_vs  : tp_vs;
-    assign out_hs  = rx_stream_enable_pclk ? rx_sym_hs  : tp_hs;
-    assign out_de  = rx_stream_enable_pclk ? rx_sym_de  : tp_de;
-    assign out_rgb = rx_stream_enable_pclk ? rx_sym_rgb : 24'h00_00_40;
+    always @(posedge rx_clk or negedge rx_rst_n) begin
+        if(!rx_rst_n) begin
+            rx_last_data         <= 32'd0;
+            rx_expected_cnt      <= 24'd0;
+            rx_seen_sticky       <= 1'b0;
+            rx_lock_sticky       <= 1'b0;
+            rx_match_pulse       <= 1'b0;
+            rx_mismatch_sticky   <= 1'b0;
+            rx_header_err_sticky <= 1'b0;
+            hard_err_sticky_rx   <= 1'b0;
+            soft_err_sticky_rx   <= 1'b0;
+        end
+        else begin
+            rx_match_pulse <= 1'b0;
 
+            if(hard_err)
+                hard_err_sticky_rx <= 1'b1;
+
+            if(soft_err)
+                soft_err_sticky_rx <= 1'b1;
+
+            if(user_rx_valid) begin
+                rx_last_data   <= user_rx_data;
+                rx_seen_sticky <= 1'b1;
+
+                if(user_rx_data[31:24] != C_TX_HDR)
+                    rx_header_err_sticky <= 1'b1;
+
+                if(!rx_lock_sticky) begin
+                    if(user_rx_data[31:24] == C_TX_HDR) begin
+                        rx_lock_sticky  <= 1'b1;
+                        rx_expected_cnt <= user_rx_data[23:0] + 24'd1;
+                    end
+                end
+                else begin
+                    if( (user_rx_data[31:24] == C_TX_HDR) &&
+                        (user_rx_data[23:0]  == rx_expected_cnt) ) begin
+                        rx_match_pulse <= 1'b1;
+                    end
+                    else begin
+                        rx_mismatch_sticky <= 1'b1;
+                    end
+
+                    rx_expected_cnt <= user_rx_data[23:0] + 24'd1;
+                end
+            end
+        end
+    end
+
+    //==========================================================================
+    // 6) LVDS 输出：始终显示本地图案
+    //==========================================================================
     rgb_2_lvds u_rgb2lvds
     (
-        .rst_n      (pixel_rst_n         ),
-        .rgb_clk    (pixclk              ),
-        .rgb_vs     (out_vs              ),
-        .rgb_hs     (out_hs              ),
-        .rgb_de     (out_de              ),
-        .rgb_data   (out_rgb             ),
-        .lvds_eclk  (lvds_eclk           ),
+        .rst_n      (pixel_rst_n),
+        .rgb_clk    (pixclk),
+        .rgb_vs     (tp_vs),
+        .rgb_hs     (tp_hs),
+        .rgb_de     (tp_de),
+        .rgb_data   ({tp_r, tp_g, tp_b}),
+        .lvds_eclk  (lvds_eclk),
 
-        .lvds_clk_p (lvdsOutClk_p        ),
-        .lvds_clk_n (lvdsOutClk_n        ),
-        .lvds_d0_p  (lvdsDataOut_p[0]    ),
-        .lvds_d0_n  (lvdsDataOut_n[0]    ),
-        .lvds_d1_p  (lvdsDataOut_p[1]    ),
-        .lvds_d1_n  (lvdsDataOut_n[1]    ),
-        .lvds_d2_p  (lvdsDataOut_p[2]    ),
-        .lvds_d2_n  (lvdsDataOut_n[2]    ),
-        .lvds_d3_p  (lvdsDataOut_p[3]    ),
-        .lvds_d3_n  (lvdsDataOut_n[3]    )
+        .lvds_clk_p (lvdsOutClk_p),
+        .lvds_clk_n (lvdsOutClk_n),
+        .lvds_d0_p  (lvdsDataOut_p[0]),
+        .lvds_d0_n  (lvdsDataOut_n[0]),
+        .lvds_d1_p  (lvdsDataOut_p[1]),
+        .lvds_d1_n  (lvdsDataOut_n[1]),
+        .lvds_d2_p  (lvdsDataOut_p[2]),
+        .lvds_d2_n  (lvdsDataOut_n[2]),
+        .lvds_d3_p  (lvdsDataOut_p[3]),
+        .lvds_d3_n  (lvdsDataOut_n[3])
     );
 
     //==========================================================================
-    // 8) 单 LED 状态编码
-    //    亮灭含义：
-    //      灭           : PLL 没起来 / 复位中
-    //      慢闪         : LVDS 正常，SerDes 还没 up
-    //      快闪         : SerDes up 了，但还没切到 RX 图
-    //      常亮         : 已经切到 RX 回环图
+    // 7) LED
+    //    灭    : PLL/复位未就绪
+    //    慢闪  : SerDes 链路未完全 up
+    //    快闪  : 链路 up 了，但 RX 还没看到数据
+    //    常亮  : RX 已看到数据，且暂未见 header/mismatch/hard/soft err
+    //    快闪  : 出现 sticky err
     //==========================================================================
     reg [25:0] led_cnt;
 
@@ -429,12 +361,74 @@ module top
             led <= 1'b0;
         else if(!serdes_link_ok)
             led <= led_blink_slow;
-        else if(!rx_stream_enable_pclk)
+        else if(!rx_seen_sticky)
             led <= led_blink_fast;
-        else if(hard_err || soft_err || tx_stream_overflow_sticky || rx_stream_underflow_sticky)
+        else if(rx_header_err_sticky || rx_mismatch_sticky || hard_err_sticky_rx || soft_err_sticky_rx)
             led <= led_blink_fast;
         else
             led <= 1'b1;
     end
+
+    //==========================================================================
+    // 8) ILA1：TX 域，统一前缀 ila1_
+    //==========================================================================
+    (* keep = "true" *) wire        ila1_clk                = tx_clk;
+    (* keep = "true" *) wire        ila1_tx_rst_n           = tx_rst_n;
+
+    (* keep = "true" *) wire        ila1_gt_pll_ok          = gt_pll_ok;
+    (* keep = "true" *) wire        ila1_channel_up         = channel_up;
+    (* keep = "true" *) wire        ila1_lane_up            = lane_up;
+    (* keep = "true" *) wire        ila1_gt_rx_align_link   = gt_rx_align_link;
+    (* keep = "true" *) wire        ila1_gt_rx_pma_lock     = gt_rx_pma_lock;
+    (* keep = "true" *) wire        ila1_gt_rx_k_lock       = gt_rx_k_lock;
+    (* keep = "true" *) wire        ila1_serdes_link_ok     = serdes_link_ok;
+    (* keep = "true" *) wire        ila1_hard_err           = hard_err;
+    (* keep = "true" *) wire        ila1_soft_err           = soft_err;
+
+    (* keep = "true" *) wire        ila1_user_tx_valid      = user_tx_valid;
+    (* keep = "true" *) wire        ila1_user_tx_ready      = user_tx_ready;
+    (* keep = "true" *) wire [31:0] ila1_user_tx_data       = user_tx_data;
+    (* keep = "true" *) wire        ila1_tx_fire            = user_tx_valid & user_tx_ready;
+    (* keep = "true" *) wire [31:0] ila1_tx_last_fire_data  = tx_last_fire_data;
+    (* keep = "true" *) wire        ila1_tx_seen_sticky     = tx_seen_sticky;
+
+    //==========================================================================
+    // 9) ILA2：pixclk 域，统一前缀 ila2_
+    //==========================================================================
+    (* keep = "true" *) wire        ila2_clk           = pixclk;
+    (* keep = "true" *) wire        ila2_pixel_rst_n   = pixel_rst_n;
+    (* keep = "true" *) wire        ila2_pll_lock      = pll_lock;
+    (* keep = "true" *) wire        ila2_tp_vs         = tp_vs;
+    (* keep = "true" *) wire        ila2_tp_hs         = tp_hs;
+    (* keep = "true" *) wire        ila2_tp_de         = tp_de;
+    (* keep = "true" *) wire [23:0] ila2_tp_rgb        = {tp_r, tp_g, tp_b};
+
+    //==========================================================================
+    // 10) ILA3：RX 域，统一前缀 ila3_
+    //==========================================================================
+    (* keep = "true" *) wire        ila3_clk                   = rx_clk;
+    (* keep = "true" *) wire        ila3_rx_rst_n              = rx_rst_n;
+
+    (* keep = "true" *) wire        ila3_gt_pll_ok             = gt_pll_ok;
+    (* keep = "true" *) wire        ila3_channel_up            = channel_up;
+    (* keep = "true" *) wire        ila3_lane_up               = lane_up;
+    (* keep = "true" *) wire        ila3_gt_rx_align_link      = gt_rx_align_link;
+    (* keep = "true" *) wire        ila3_gt_rx_pma_lock        = gt_rx_pma_lock;
+    (* keep = "true" *) wire        ila3_gt_rx_k_lock          = gt_rx_k_lock;
+    (* keep = "true" *) wire        ila3_serdes_link_ok        = serdes_link_ok;
+    (* keep = "true" *) wire        ila3_hard_err              = hard_err;
+    (* keep = "true" *) wire        ila3_soft_err              = soft_err;
+
+    (* keep = "true" *) wire        ila3_user_rx_valid         = user_rx_valid;
+    (* keep = "true" *) wire [31:0] ila3_user_rx_data          = user_rx_data;
+    (* keep = "true" *) wire [31:0] ila3_rx_last_data          = rx_last_data;
+    (* keep = "true" *) wire [31:0] ila3_rx_expected_data      = {C_TX_HDR, rx_expected_cnt};
+    (* keep = "true" *) wire        ila3_rx_seen_sticky        = rx_seen_sticky;
+    (* keep = "true" *) wire        ila3_rx_lock_sticky        = rx_lock_sticky;
+    (* keep = "true" *) wire        ila3_rx_match_pulse        = rx_match_pulse;
+    (* keep = "true" *) wire        ila3_rx_mismatch_sticky    = rx_mismatch_sticky;
+    (* keep = "true" *) wire        ila3_rx_header_err_sticky  = rx_header_err_sticky;
+    (* keep = "true" *) wire        ila3_hard_err_sticky       = hard_err_sticky_rx;
+    (* keep = "true" *) wire        ila3_soft_err_sticky       = soft_err_sticky_rx;
 
 endmodule

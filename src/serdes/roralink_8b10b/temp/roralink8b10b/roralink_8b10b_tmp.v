@@ -5,7 +5,7 @@
 //Part Number: GW5AT-LV15MG132C1/I0
 //Device: GW5AT-15
 //Device Version: B
-//Created Time: Thu Apr 23 11:35:02 2026
+//Created Time: Thu Apr 23 16:32:10 2026
 
 //Change the instance name and port connections to the signal names
 //--------Copy here to design--------
