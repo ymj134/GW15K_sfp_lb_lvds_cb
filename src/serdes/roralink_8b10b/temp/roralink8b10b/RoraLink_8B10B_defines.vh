@@ -1,6 +1,7 @@
 `define DUPLEX_EN
 `define STREAMING_EN
 `define NONE_EN
+`define SCRAMBLER_EN
 `define LITTLE_ENDIAN_EN
 `define LANE_WIDTH 1
 `define LANE_DATA_WIDTH 32
