@@ -31,10 +31,10 @@ refmux_scheme = "USER_DEFINED"
 
 
 [q0.ln0]
-tx_data_rate = "3.125G"
-rx_data_rate = "3.125G"
+tx_data_rate = "1.5625G"
+rx_data_rate = "1.5625G"
 pcs_tx_clk_src = 0
-loopBack = "LB_FES"
+loopBack = "OFF"
 enable = true
 width_mode = 20
 rx_seperated_width_mode = "20"

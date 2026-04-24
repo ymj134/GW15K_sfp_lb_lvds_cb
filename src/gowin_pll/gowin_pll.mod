@@ -7,9 +7,10 @@
 
 -mod_name Gowin_PLL_MOD
 -file_name gowin_pll_mod
--path E:/ymj_project/serdes/GW15K_lvds_colorbar/src/gowin_pll/
+-path E:/ymj_project/serdes/GW15K_sfp_lb_lvds_cb/src/gowin_pll/
 -type PLL_ADV
 -file_type vlg
+-ip_version 1.0
 -ssc false
 -rst true
 -rst_pwd false
@@ -23,7 +24,7 @@
 -en_lock true
 -dyn_dpa_en false
 -clkout0_bypass false
--odiv0_sel 4
+-odiv0_sel 14
 -odiv0_frac_sel 0
 -clkout0_dt_dir 1
 -clkout0_dt_step 0
