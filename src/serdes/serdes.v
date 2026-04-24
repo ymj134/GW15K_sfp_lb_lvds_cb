@@ -1,11 +1,12 @@
-//Copyright (C)2014-2025 Gowin Semiconductor Corporation.
+//Copyright (C)2014-2026 Gowin Semiconductor Corporation.
 //All rights reserved.
 //File Title: IP file
-//Tool Version: V1.9.12 (64-bit)
+//Tool Version: V1.9.12.02_SP2 (64-bit)
+//IP Version: 1.0
 //Part Number: GW5AT-LV15MG132C1/I0
 //Device: GW5AT-15
 //Device Version: B
-//Created Time: Fri Apr 24 10:33:29 2026
+//Created Time: Fri Apr 24 14:34:18 2026
 
 module SerDes_Top (RoraLink_8B10B_Top_link_reset_o, RoraLink_8B10B_Top_sys_reset_o, RoraLink_8B10B_Top_user_tx_ready_o, RoraLink_8B10B_Top_user_rx_data_o, RoraLink_8B10B_Top_user_rx_valid_o, RoraLink_8B10B_Top_hard_err_o, RoraLink_8B10B_Top_soft_err_o, RoraLink_8B10B_Top_channel_up_o, RoraLink_8B10B_Top_lane_up_o, RoraLink_8B10B_Top_gt_pcs_tx_clk_o, RoraLink_8B10B_Top_gt_pcs_rx_clk_o, RoraLink_8B10B_Top_gt_pll_lock_o, RoraLink_8B10B_Top_gt_rx_align_link_o, RoraLink_8B10B_Top_gt_rx_pma_lock_o, RoraLink_8B10B_Top_gt_rx_k_lock_o, RoraLink_8B10B_Top_user_clk_i, RoraLink_8B10B_Top_init_clk_i, RoraLink_8B10B_Top_reset_i, RoraLink_8B10B_Top_user_pll_locked_i, RoraLink_8B10B_Top_user_tx_data_i, RoraLink_8B10B_Top_user_tx_valid_i, RoraLink_8B10B_Top_gt_reset_i, RoraLink_8B10B_Top_gt_pcs_tx_reset_i, RoraLink_8B10B_Top_gt_pcs_rx_reset_i);
 
@@ -190,6 +191,8 @@ wire q0_ckp_mipi_0;
 wire q0_ckn_mipi_1;
 wire q0_ckn_mipi_0;
 wire gw_gnd;
+
+
 
 
 assign gw_gnd = 1'b0;

@@ -4,12 +4,12 @@
     <Version>beta</Version>
     <Device id="GW5AT-15B" package="MBGA132" speed="1" partNumber="GW5AT-LV15MG132C1/I0"/>
     <FileList>
-        <File path="D:/Gowin/Gowin_V1.9.12_x64/IDE/ipcore/SERDES_IP/IPlib/RORALINK8B10B/data/RoraLink_8B10B_Top.v" type="verilog"/>
-        <File path="D:/Gowin/Gowin_V1.9.12_x64/IDE/ipcore/SERDES_IP/IPlib/RORALINK8B10B/data/RoraLink_8B10B_Core_encryption.v" type="verilog"/>
+        <File path="D:/Gowin/Gowin_V1.9.12.02_SP2_x64/IDE/ipcore/SERDES_IP/IPlib/RORALINK8B10B/data/RoraLink_8B10B_Top.v" type="verilog"/>
+        <File path="D:/Gowin/Gowin_V1.9.12.02_SP2_x64/IDE/ipcore/SERDES_IP/IPlib/RORALINK8B10B/data/RoraLink_8B10B_Core_encryption.v" type="verilog"/>
     </FileList>
     <OptionList>
         <Option type="disable_insert_pad" value="1"/>
-        <Option type="include_path" value="D:/Gowin/Gowin_V1.9.12_x64/IDE/ipcore/SERDES_IP/IPlib/RORALINK8B10B/data"/>
+        <Option type="include_path" value="D:/Gowin/Gowin_V1.9.12.02_SP2_x64/IDE/ipcore/SERDES_IP/IPlib/RORALINK8B10B/data"/>
         <Option type="include_path" value="E:/ymj_project/serdes/GW15K_sfp_lb_lvds_cb/src/serdes/roralink_8b10b/temp/roralink8b10b"/>
         <Option type="output_file" value="roralink_8b10b.vg"/>
         <Option type="output_template" value="roralink_8b10b_tmp.v"/>

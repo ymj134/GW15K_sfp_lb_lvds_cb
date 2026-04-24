@@ -8,6 +8,8 @@ regulator_enable = false
 [q0]
 enable = true
 ref_pad0_freq = "125M"
+cmu0_reset_by_fabric = false
+cmu1_reset_by_fabric = false
 rx_eq_bias = 7
 quad_clk_to_mac_sel = "CM0"
 mac_quad_clk_sel = "Q0"
@@ -32,7 +34,7 @@ refmux_scheme = "USER_DEFINED"
 tx_data_rate = "3.125G"
 rx_data_rate = "3.125G"
 pcs_tx_clk_src = 0
-loopBack = "OFF"
+loopBack = "LB_FES"
 enable = true
 width_mode = 20
 rx_seperated_width_mode = "20"
@@ -54,7 +56,7 @@ comma = "K28.5"
 comma_mask = "1111111111"
 chbond_enable = true
 chbond_trigger_by_fabric = true
-chbond_align_length = 0
+chbond_align_length = 1
 chbond_align_pattern0 = 124
 chbond_max_skew = 7
 chbond_cfg_rd_start_depth = 8
@@ -71,6 +73,7 @@ ctc_skipa_pattern = 247
 ctc_skipb_pattern = 247
 ctc_skipb_pattern_is_kcode = true
 ctc_rd_start_depth = "8"
+cpll_reset_by_fabric = false
 chbond_align_pattern1 = 124
 chbond_align_pattern1_is_kcode = false
 chbond_align_pattern2 = 124
@@ -114,6 +117,7 @@ cpll_ref_sel = 0
 
 
 [q0.ln1]
+cpll_reset_by_fabric = false
 chbond_align_pattern1 = 124
 chbond_align_pattern1_is_kcode = false
 chbond_align_pattern2 = 124
@@ -128,7 +132,7 @@ txPattern = "PRBS31"
 cdr_gc_counter = 250
 cdr_calib_clk_src = "AUTO"
 chbond_enable = false
-chbond_align_length = 0
+chbond_align_length = 1
 chbond_align_pattern0 = 124
 chbond_mst_sel = "q0.ln1"
 chbond_max_skew = 8
@@ -199,6 +203,7 @@ cpll_ref_sel = 0
 
 
 [q0.ln2]
+cpll_reset_by_fabric = false
 chbond_align_pattern1 = 124
 chbond_align_pattern1_is_kcode = false
 chbond_align_pattern2 = 124
@@ -213,7 +218,7 @@ txPattern = "PRBS31"
 cdr_gc_counter = 250
 cdr_calib_clk_src = "AUTO"
 chbond_enable = false
-chbond_align_length = 0
+chbond_align_length = 1
 chbond_align_pattern0 = 124
 chbond_mst_sel = "q0.ln2"
 chbond_max_skew = 8
@@ -284,6 +289,7 @@ cpll_ref_sel = 0
 
 
 [q0.ln3]
+cpll_reset_by_fabric = false
 chbond_align_pattern1 = 124
 chbond_align_pattern1_is_kcode = false
 chbond_align_pattern2 = 124
@@ -298,7 +304,7 @@ txPattern = "PRBS31"
 cdr_gc_counter = 250
 cdr_calib_clk_src = "AUTO"
 chbond_enable = false
-chbond_align_length = 0
+chbond_align_length = 1
 chbond_align_pattern0 = 124
 chbond_mst_sel = "q0.ln3"
 chbond_max_skew = 8
