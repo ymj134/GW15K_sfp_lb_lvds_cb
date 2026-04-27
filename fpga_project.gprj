@@ -13,7 +13,11 @@
         <File path="src/lvds_tx_ctrl/lvds_7_to_1_tx.v" type="file.verilog" enable="1"/>
         <File path="src/lvds_tx_ctrl/rgb_2_lvds.v" type="file.verilog" enable="1"/>
         <File path="src/pll_init.v" type="file.verilog" enable="1"/>
+        <File path="src/prbs7_chk.v" type="file.verilog" enable="1"/>
+        <File path="src/prbs7_gen.v" type="file.verilog" enable="1"/>
+        <File path="src/prbs7_single_channel.v" type="file.verilog" enable="1"/>
         <File path="src/reset_gen.v" type="file.verilog" enable="1"/>
+        <File path="src/serdes/customized_phy/customized_phy.v" type="file.verilog" enable="1"/>
         <File path="src/serdes/roralink_8b10b/roralink_8b10b.v" type="file.verilog" enable="1"/>
         <File path="src/serdes/serdes.v" type="file.verilog" enable="1"/>
         <File path="src/testpattern.v" type="file.verilog" enable="1"/>
@@ -23,7 +27,7 @@
         <File path="src/fpga_project.cst" type="file.cst" enable="1"/>
         <File path="src/fpga_project.sdc" type="file.sdc" enable="1"/>
         <File path="src/fpga_project.rao" type="file.gao" enable="0"/>
-        <File path="src/ila1.rao" type="file.gao" enable="1"/>
+        <File path="src/ila1.rao" type="file.gao" enable="0"/>
         <File path="src/ila3.rao" type="file.gao" enable="0"/>
     </FileList>
 </Project>

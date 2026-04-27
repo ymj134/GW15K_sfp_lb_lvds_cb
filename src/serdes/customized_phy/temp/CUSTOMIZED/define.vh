@@ -1,0 +1,9 @@
+`define Q0_LN0
+`define Q0_LN0_TX_PMA_WIDTH 10
+`define Q0_LN0_RX_PMA_WIDTH 10
+`define Q0_LN0_TX_GEARBOX 1
+`define Q0_LN0_RX_GEARBOX 1
+`define Q0_LN0_CHANNEL_BONDING_MASTER_SEL 0
+`define Q0_LN0_TX_IF_MST_SEL 0
+`define MODULE_NAME Customized_PHY_Top
+`define GW5AT15
