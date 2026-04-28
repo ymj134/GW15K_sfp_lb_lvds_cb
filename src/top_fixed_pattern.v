@@ -22,28 +22,25 @@ parameter LANE_DATA_WIDTH = `LANE_DATA_WIDTH;
 // 每帧 16 个 32bit beat
 parameter FRAME_BEATS     = 16;
 
-// 版本号：V1.3.0 -> 0x01030000
-localparam [31:0] TOP_VERSION = 32'h0103_0000;
+// 固定发送字：选一个 4 个 byte 都不同、且不对称的值，便于看规律
+parameter [31:0] TX_FIXED_WORD = 32'h12_34_56_78;
 
-// 4-beat 固定循环模式
-localparam [31:0] TX_PATTERN0 = 32'h12_34_56_78;
-localparam [31:0] TX_PATTERN1 = 32'h9A_BC_DE_F0;
-localparam [31:0] TX_PATTERN2 = 32'h55_AA_C3_3C;
-localparam [31:0] TX_PATTERN3 = 32'h0F_1E_2D_3C;
+// 版本号：V1.2.0 -> 0x01020000
+localparam [31:0] TOP_VERSION = 32'h0102_0000;
 
 //==============================================================================
 // 1) 用户接口信号
 //==============================================================================
-wire [DATA_WIDTH-1:0] user_tx_data  /* synthesis syn_keep=1 */;
-wire [STRB_WIDTH-1:0] user_tx_strb  /* synthesis syn_keep=1 */;
-wire                  user_tx_valid /* synthesis syn_keep=1 */;
-wire                  user_tx_last  /* synthesis syn_keep=1 */;
-wire                  user_tx_ready /* synthesis syn_keep=1 */;
+wire [DATA_WIDTH-1:0] user_tx_data /* synthesis syn_keep=1 */;
+wire [STRB_WIDTH-1:0] user_tx_strb /* synthesis syn_keep=1 */;
+wire                  user_tx_valid/* synthesis syn_keep=1 */;
+wire                  user_tx_last /* synthesis syn_keep=1 */;
+wire                  user_tx_ready/* synthesis syn_keep=1 */;
 
-wire [DATA_WIDTH-1:0] user_rx_data  /* synthesis syn_keep=1 */;
-wire [STRB_WIDTH-1:0] user_rx_strb  /* synthesis syn_keep=1 */;
-wire                  user_rx_valid /* synthesis syn_keep=1 */;
-wire                  user_rx_last  /* synthesis syn_keep=1 */;
+wire [DATA_WIDTH-1:0] user_rx_data /* synthesis syn_keep=1 */;
+wire [STRB_WIDTH-1:0] user_rx_strb /* synthesis syn_keep=1 */;
+wire                  user_rx_valid/* synthesis syn_keep=1 */;
+wire                  user_rx_last /* synthesis syn_keep=1 */;
 
 wire                  crc_pass_fail_n;
 wire                  crc_valid;
@@ -84,9 +81,6 @@ wire                  sys_reset;
 // 3) 最小 TX/RX 测试逻辑
 //==============================================================================
 reg  [7:0]  tx_beat_cnt;
-reg  [31:0] rx_last_data;
-reg  [31:0] rx_prev_data;
-reg         rx_data_changed;
 
 reg         channel_up_1d;
 reg         rx_seen_valid;
@@ -100,34 +94,39 @@ reg         soft_err_seen;
 reg         frame_err_seen;
 reg         crc_err_seen;
 
+// 为了方便观察，额外保留最近一次 RX 数据
+reg  [31:0] rx_last_data;
+reg  [31:0] rx_prev_data;
+reg         rx_data_changed;
+
 //==============================================================================
 // 4) 顶层固定连接
 //==============================================================================
-// assign sfp1_tx_disable_o = 1'b0;     //15k板子此接口已经固定低电平
+// assign sfp1_tx_disable_o = 1'b0;     // 15k板子此接口已经固定低电平
 // assign sfp2_tx_disable_o = 1'b0;
 
-assign led               = test_pass;
+assign led = test_pass;
 
 // 保持与官方参考 top 一致的关键骨架
-assign sys_clk           = gt_pcs_tx_clk[0];
+assign sys_clk         = gt_pcs_tx_clk[0];
 
-// 这一版不再通过寄存器软件控制 GT/PCS 复位，全部固定为 0
-assign gt_reset          = 1'b0;
-assign gt_pcs_tx_reset   = 1'b0;
-assign gt_pcs_rx_reset   = 1'b0;
+// 不通过寄存器软件控制 GT/PCS 复位，全部固定为 0
+assign gt_reset        = 1'b0;
+assign gt_pcs_tx_reset = 1'b0;
+assign gt_pcs_rx_reset = 1'b0;
 
-assign sys_reset_gen     = cfg_pll_lock & gt_pll_ok & rst_n;
+assign sys_reset_gen   = cfg_pll_lock & gt_pll_ok & rst_n;
 
 //==============================================================================
 // 5) 配置时钟与复位生成
 //==============================================================================
 Gowin_PLL u_Gowin_PLL
 (
-    .reset      ( !rst_n        ),
-    .lock       ( cfg_pll_lock  ),
-    .clkout0    ( cfg_clk       ),
-    .mdclk      ( clk           ),
-    .clkin      ( clk           )
+    .reset      ( !rst_n       ),
+    .lock       ( cfg_pll_lock ),
+    .clkout0    ( cfg_clk      ),
+    .mdclk      ( clk          ),
+    .clkin      ( clk          )
 );
 
 reset_gen u2_reset_gen
@@ -138,35 +137,24 @@ reset_gen u2_reset_gen
 );
 
 //==============================================================================
-// 6) 4-beat 固定模式 Framing 发送器
+// 6) 最小合法 Framing 发送器（固定数据版本）
 //------------------------------------------------------------------------------
-// 每帧 16 个 beat，帧内数据按 4 个固定 32bit 字循环发送：
-//   beat[1:0] = 0 -> TX_PATTERN0
-//   beat[1:0] = 1 -> TX_PATTERN1
-//   beat[1:0] = 2 -> TX_PATTERN2
-//   beat[1:0] = 3 -> TX_PATTERN3
+// 每 FRAME_BEATS 个 beat 构成一帧：
+//   - user_tx_valid: 在 channel_up 后持续拉高
+//   - user_tx_last : 每帧最后一个握手 beat 拉高
+//   - user_tx_strb : 固定全有效
+//   - user_tx_data : 不再递增，固定发送 TX_FIXED_WORD
 //==============================================================================
 wire tx_active;
 wire tx_fire;
-reg  [31:0] tx_pattern_word;
 
 assign tx_active     = channel_up_1d & (~sys_reset);
 assign tx_fire       = user_tx_valid & user_tx_ready;
 
 assign user_tx_valid = tx_active;
-assign user_tx_data  = tx_pattern_word;
+assign user_tx_data  = TX_FIXED_WORD;
 assign user_tx_strb  = {STRB_WIDTH{1'b1}};
 assign user_tx_last  = tx_active & (tx_beat_cnt == FRAME_BEATS-1);
-
-always @(*) begin
-    case (tx_beat_cnt[1:0])
-        2'd0: tx_pattern_word = TX_PATTERN0;
-        2'd1: tx_pattern_word = TX_PATTERN1;
-        2'd2: tx_pattern_word = TX_PATTERN2;
-        2'd3: tx_pattern_word = TX_PATTERN3;
-        default: tx_pattern_word = TX_PATTERN0;
-    endcase
-end
 
 always @(posedge sys_clk) begin
     if (sys_reset) begin
@@ -186,11 +174,11 @@ end
 //==============================================================================
 // 7) 最小 RX 观察逻辑
 //------------------------------------------------------------------------------
-// 不做 payload 正确性判定，只记录：
-//   1. 是否收到过有效数据
-//   2. 是否收到过完整帧（user_rx_last）
-//   3. RX 数据是否变化、上一拍/当前拍是什么
-//   4. 是否出现 hard/soft/frame/crc error
+// 这版不做逐 beat 正确性判断，只观察：
+//   1. 是否收到了有效数据
+//   2. 是否收到了完整帧（user_rx_last）
+//   3. IP 是否报告了 hard/soft/frame/crc error
+//   4. 最近一次 RX 数据是多少、是否发生变化
 //==============================================================================
 always @(posedge sys_clk) begin
     if (sys_reset) begin
@@ -234,7 +222,9 @@ always @(posedge sys_clk) begin
 
                 rx_prev_data       <= rx_last_data;
                 rx_last_data       <= user_rx_data;
-                rx_data_changed    <= (user_rx_data != rx_last_data);
+
+                if (user_rx_data != rx_last_data)
+                    rx_data_changed <= 1'b1;
             end
 
             if (user_rx_valid && user_rx_last)
@@ -269,15 +259,13 @@ end
 // 8) ILA 观测信号（统一 ila_ 前缀）
 //==============================================================================
 wire [31:0] ila_top_version       = TOP_VERSION;
-wire [31:0] ila_tx_pat0           = TX_PATTERN0;
-wire [31:0] ila_tx_pat1           = TX_PATTERN1;
-wire [31:0] ila_tx_pat2           = TX_PATTERN2;
-wire [31:0] ila_tx_pat3           = TX_PATTERN3;
-wire [31:0] ila_tx_pattern_word   = tx_pattern_word;
+wire [31:0] ila_tx_fixed_word     = TX_FIXED_WORD;
 
 wire        ila_sys_clk           = sys_clk;
+
 wire        ila_sys_reset         = sys_reset;
 wire        ila_link_reset        = link_reset;
+
 wire        ila_gt_reset          = gt_reset;
 wire        ila_gt_pcs_tx_reset   = gt_pcs_tx_reset;
 wire        ila_gt_pcs_rx_reset   = gt_pcs_rx_reset;
@@ -305,9 +293,6 @@ wire [DATA_WIDTH-1:0] ila_user_rx_data  = user_rx_data;
 wire [STRB_WIDTH-1:0] ila_user_rx_strb  = user_rx_strb;
 wire                  ila_user_rx_valid = user_rx_valid;
 wire                  ila_user_rx_last  = user_rx_last;
-wire [31:0]           ila_rx_last_data  = rx_last_data;
-wire [31:0]           ila_rx_prev_data  = rx_prev_data;
-wire                  ila_rx_data_changed = rx_data_changed;
 
 wire                  ila_crc_valid       = crc_valid;
 wire                  ila_crc_pass_fail_n = crc_pass_fail_n;
@@ -323,6 +308,9 @@ wire                  ila_soft_err_seen      = soft_err_seen;
 wire                  ila_frame_err_seen     = frame_err_seen;
 wire                  ila_crc_err_seen       = crc_err_seen;
 wire                  ila_test_pass          = test_pass;
+wire [31:0]           ila_rx_last_data       = rx_last_data;
+wire [31:0]           ila_rx_prev_data       = rx_prev_data;
+wire                  ila_rx_data_changed    = rx_data_changed;
 
 //==============================================================================
 // 9) SerDes_Top 实例
@@ -378,30 +366,30 @@ SerDes_Top u_SerDes_Top
 
 endmodule
 
-// //==============================================================================
-// // reset_gen
-// //==============================================================================
-// module reset_gen
-// (
-//     input           i_clk1,
-//     input           i_lock,
-//     output reg      o_rst1 = 1'b1
-// );
+//==============================================================================
+// reset_gen
+//==============================================================================
+module reset_gen
+(
+    input           i_clk1,
+    input           i_lock,
+    output reg      o_rst1 = 1'b1
+);
 
-// reg [11:0] r_cnt = 12'd0;
+reg [11:0] r_cnt = 12'd0;
 
-// always @(posedge i_clk1) begin
-//     if (!i_lock) begin
-//         r_cnt  <= 12'd0;
-//         o_rst1 <= 1'b1;
-//     end
-//     else if (r_cnt < 12'hfff) begin
-//         r_cnt  <= r_cnt + 12'd1;
-//         o_rst1 <= 1'b1;
-//     end
-//     else begin
-//         o_rst1 <= 1'b0;
-//     end
-// end
+always @(posedge i_clk1) begin
+    if (!i_lock) begin
+        r_cnt  <= 12'd0;
+        o_rst1 <= 1'b1;
+    end
+    else if (r_cnt < 12'hfff) begin
+        r_cnt  <= r_cnt + 12'd1;
+        o_rst1 <= 1'b1;
+    end
+    else begin
+        o_rst1 <= 1'b0;
+    end
+end
 
-// endmodule
+endmodule

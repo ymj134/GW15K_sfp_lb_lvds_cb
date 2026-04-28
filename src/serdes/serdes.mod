@@ -14,7 +14,7 @@
 -protocol_module_name0 RoraLink_8B10B_Top
 -RoraLink_8B10B_Topprotocol_module_type roralink8b10b
 -RoraLink_8B10B_TopReferenceClockSource Q0REFCLK0
--RoraLink_8B10B_TopPLLSource CPLL
+-RoraLink_8B10B_TopPLLSource QPLL0
 -RoraLink_8B10B_TopDataWidthPerLane 4
 -RoraLink_8B10B_TopNumberoflanes 1
 -RoraLink_8B10B_TopDataFlowMode Duplex

@@ -33,7 +33,7 @@ refmux_scheme = "USER_DEFINED"
 [q0.ln0]
 tx_data_rate = "3.125G"
 rx_data_rate = "3.125G"
-pcs_tx_clk_src = 0
+pcs_tx_clk_src = 1
 loopBack = "OFF"
 enable = true
 width_mode = 20
@@ -60,7 +60,7 @@ chbond_align_length = 1
 chbond_align_pattern0 = 124
 chbond_max_skew = 7
 chbond_cfg_rd_start_depth = 8
-chbond_clk_src = "quad"
+chbond_clk_src = "lane"
 ctc_enable = true
 ctc_skipb_pattern_enable = true
 rx_if_cfg_rd_start_depth = 8

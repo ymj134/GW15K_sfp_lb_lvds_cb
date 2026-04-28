@@ -378,30 +378,30 @@ SerDes_Top u_SerDes_Top
 
 endmodule
 
-// //==============================================================================
-// // reset_gen
-// //==============================================================================
-// module reset_gen
-// (
-//     input           i_clk1,
-//     input           i_lock,
-//     output reg      o_rst1 = 1'b1
-// );
+//==============================================================================
+// reset_gen
+//==============================================================================
+module reset_gen
+(
+    input           i_clk1,
+    input           i_lock,
+    output reg      o_rst1 = 1'b1
+);
 
-// reg [11:0] r_cnt = 12'd0;
+reg [11:0] r_cnt = 12'd0;
 
-// always @(posedge i_clk1) begin
-//     if (!i_lock) begin
-//         r_cnt  <= 12'd0;
-//         o_rst1 <= 1'b1;
-//     end
-//     else if (r_cnt < 12'hfff) begin
-//         r_cnt  <= r_cnt + 12'd1;
-//         o_rst1 <= 1'b1;
-//     end
-//     else begin
-//         o_rst1 <= 1'b0;
-//     end
-// end
+always @(posedge i_clk1) begin
+    if (!i_lock) begin
+        r_cnt  <= 12'd0;
+        o_rst1 <= 1'b1;
+    end
+    else if (r_cnt < 12'hfff) begin
+        r_cnt  <= r_cnt + 12'd1;
+        o_rst1 <= 1'b1;
+    end
+    else begin
+        o_rst1 <= 1'b0;
+    end
+end
 
-// endmodule
+endmodule
