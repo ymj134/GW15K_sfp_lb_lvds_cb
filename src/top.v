@@ -1,25 +1,5 @@
 `timescale 1 ns / 1 ps
 
-/*********************************************************************************
-* Version      : RL8B10B_TOP_V1.1.0
-* Date         : 2026-03-24
-* Description  :
-*   1) 基于 RL8B10B_TOP_V1.0.0 再进一步删减。
-*   2) 继续保留官方参考工程 proven 的 clock/reset/SerDes_Top 主骨架。
-*   3) 继续删除 UART/APB/寄存器链路。
-*   4) TX 保留“最小合法 Framing 发送器”。
-*   5) RX 进一步简化：
-*      - 不再做逐 beat 数据递增比较
-*      - 只确认“是否收到完整帧”
-*      - 同时监控 IP 级错误信号
-*   6) test_pass 条件改为：
-*      - channel_up 已经建立
-*      - 至少收到 1 个完整 RX 帧
-*      - 没有 hard/soft/frame/crc error
-*
-* Usage :
-*   这版用于回答“建链 + 合法帧收发”的最小必要条件。
-*********************************************************************************/
 
 module top
 (
@@ -77,7 +57,6 @@ wire                  sys_clk     /* synthesis syn_keep=1 */;
 wire                  sys_rst;
 wire                  cfg_clk;
 wire                  cfg_pll_lock;
-wire                  cfg_rst;
 
 wire                  sys_reset_gen;
 
@@ -140,7 +119,6 @@ assign gt_reset          = 1'b0;
 assign gt_pcs_tx_reset   = 1'b0;
 assign gt_pcs_rx_reset   = 1'b0;
 
-// 删除 reg_rst，直接使用官方参考思路的精简版
 assign sys_reset_gen     = cfg_pll_lock & gt_pll_ok & rst_n;
 
 //==============================================================================
@@ -155,12 +133,6 @@ Gowin_PLL u_Gowin_PLL
     .clkin      ( clk     )
 );
 
-reset_gen u1_reset_gen
-(
-   .i_clk1     ( cfg_clk       ),
-   .i_lock     ( cfg_pll_lock  ),
-   .o_rst1     ( cfg_rst       )
-);
 
 reset_gen u2_reset_gen
 (
@@ -168,6 +140,7 @@ reset_gen u2_reset_gen
     .i_lock     ( sys_reset_gen ),
     .o_rst1     ( sys_rst       )
 );
+
 
 //==============================================================================
 // 6) 最小合法 Framing 发送器
@@ -288,13 +261,8 @@ end
 //==============================================================================
  wire [31:0] ila_top_version       = TOP_VERSION;
 
- wire        ila_cfg_clk           = cfg_clk;
- wire        ila_cfg_pll_lock      = cfg_pll_lock;
- wire        ila_cfg_rst           = cfg_rst;
-
  wire        ila_sys_clk           = sys_clk;
- wire        ila_sys_reset_gen     = sys_reset_gen;
- wire        ila_sys_rst           = sys_rst;
+
  wire        ila_sys_reset         = sys_reset;
  wire        ila_link_reset        = link_reset;
 
