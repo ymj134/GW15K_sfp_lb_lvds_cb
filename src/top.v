@@ -1,99 +1,398 @@
-module top(
-    input  wire clk,
-    input  wire rst_n,
-    //output wire sfp_tx_disable,  //板子硬件已经固定接低电平
-    output wire led
+`timescale 1 ns / 1 ps
+
+/*********************************************************************************
+* Version      : RL8B10B_TOP_V1.1.0
+* Date         : 2026-03-24
+* Description  :
+*   1) 基于 RL8B10B_TOP_V1.0.0 再进一步删减。
+*   2) 继续保留官方参考工程 proven 的 clock/reset/SerDes_Top 主骨架。
+*   3) 继续删除 UART/APB/寄存器链路。
+*   4) TX 保留“最小合法 Framing 发送器”。
+*   5) RX 进一步简化：
+*      - 不再做逐 beat 数据递增比较
+*      - 只确认“是否收到完整帧”
+*      - 同时监控 IP 级错误信号
+*   6) test_pass 条件改为：
+*      - channel_up 已经建立
+*      - 至少收到 1 个完整 RX 帧
+*      - 没有 hard/soft/frame/crc error
+*
+* Usage :
+*   这版用于回答“建链 + 合法帧收发”的最小必要条件。
+*********************************************************************************/
+
+module top
+(
+    input           clk,          // 50M
+    input           rst_n,           // low-active
+
+    output    led
 );
 
-    //assign sfp_tx_disable = 1'b0;
+//==============================================================================
+// 0) 参数定义
+//==============================================================================
+`define LANE_WIDTH      1
+`define LANE_DATA_WIDTH 32
 
-    wire        phy_rx_pcs_clkout;
-    wire [87:0] phy_rx_data;
-    wire [4:0]  phy_rx_fifo_rdusewd;
-    wire        phy_rx_fifo_aempty;
-    wire        phy_rx_fifo_empty;
-    wire        phy_rx_valid;
+parameter DATA_WIDTH      = `LANE_DATA_WIDTH * `LANE_WIDTH;
+parameter STRB_WIDTH      = DATA_WIDTH/8;
+parameter LANE_WIDTH      = `LANE_WIDTH;
+parameter LANE_DATA_WIDTH = `LANE_DATA_WIDTH;
 
-    wire        phy_tx_pcs_clkout;
-    wire [4:0]  phy_tx_fifo_wrusewd;
-    wire        phy_tx_fifo_afull;
-    wire        phy_tx_fifo_full;
+// 每帧 16 个 32bit beat
+parameter FRAME_BEATS     = 16;
 
-    wire        phy_refclk;
-    wire        phy_signal_detect;
-    wire        phy_rx_cdr_lock;
-    wire        phy_pll_lock;
-    wire        phy_ready;
+// 版本号：V1.1.0 -> 0x01010000
+localparam [31:0] TOP_VERSION = 32'h0101_0000;
 
-    wire        phy_rx_clk;
-    wire        phy_rx_fifo_rden;
-    wire        phy_tx_clk;
-    wire [79:0] phy_tx_data;
-    wire        phy_tx_fifo_wren;
-    wire        phy_pma_rstn;
-    wire        phy_pcs_rx_rst;
-    wire        phy_pcs_tx_rst;
+//==============================================================================
+// 1) 用户接口信号
+//==============================================================================
+wire [DATA_WIDTH-1:0] user_tx_data /* synthesis syn_keep=1 */;
+wire [STRB_WIDTH-1:0] user_tx_strb /* synthesis syn_keep=1 */;
+wire                  user_tx_valid/* synthesis syn_keep=1 */;
+wire                  user_tx_last /* synthesis syn_keep=1 */;
+wire                  user_tx_ready/* synthesis syn_keep=1 */;
 
-    assign phy_rx_clk       = phy_rx_pcs_clkout;
-    assign phy_tx_clk       = phy_tx_pcs_clkout;
-    assign phy_rx_fifo_rden = ~phy_rx_fifo_aempty;
-    assign phy_tx_fifo_wren = ~phy_tx_fifo_afull;
+wire [DATA_WIDTH-1:0] user_rx_data /* synthesis syn_keep=1 */;
+wire [STRB_WIDTH-1:0] user_rx_strb /* synthesis syn_keep=1 */;
+wire                  user_rx_valid/* synthesis syn_keep=1 */;
+wire                  user_rx_last /* synthesis syn_keep=1 */;
 
-    assign phy_pma_rstn     = 1'b1;
-    assign phy_pcs_rx_rst   = 1'b0;
-    assign phy_pcs_tx_rst   = 1'b0;
+wire                  crc_pass_fail_n;
+wire                  crc_valid;
 
-    wire [7:0] prbs7_tx_data;
-    wire [7:0] prbs7_rx_data;
-    wire       prbs7_lock;
+wire                  hard_err;
+wire                  soft_err;
+wire                  frame_err;
 
-    assign phy_tx_data   = {10'b0,10'b0,10'b0,10'b0,10'b0,10'b0,10'b0,{2'b0,prbs7_tx_data}};
-    assign prbs7_rx_data = phy_rx_data[7:0];
+wire                  channel_up /* synthesis syn_keep=1 */;
+wire [LANE_WIDTH-1:0] lane_up    /* synthesis syn_keep=1 */;
 
-    prbs7_single_channel #(
-        .WIDTH(8)
-    ) u_prbs7 (
-        .tx_clk_i  (phy_tx_clk),
-        .tx_rstn_i (rst_n),
-        .tx_en_i   (1'b1),
-        .tx_data_o (prbs7_tx_data),
+//==============================================================================
+// 2) 时钟 / 复位 / SerDes 状态
+//==============================================================================
+wire                  sys_clk     /* synthesis syn_keep=1 */;
+wire                  sys_rst;
+wire                  cfg_clk;
+wire                  cfg_pll_lock;
+wire                  cfg_rst;
 
-        .rx_clk_i  (phy_rx_clk),
-        .rx_rstn_i (phy_rx_cdr_lock),
-        .rx_en_i   (1'b1),
-        .rx_data_i (prbs7_rx_data),
-        .lock_o    (prbs7_lock)
-    );
+wire                  sys_reset_gen;
 
-    assign led = prbs7_lock;
+wire                  gt_reset;
+wire                  gt_pcs_tx_reset;
+wire                  gt_pcs_rx_reset;
 
-    SerDes_Top u_phy (
-        .Customized_PHY_Top_q0_ln0_rx_pcs_clkout_o(phy_rx_pcs_clkout),
-        .Customized_PHY_Top_q0_ln0_rx_data_o       (phy_rx_data),
-        .Customized_PHY_Top_q0_ln0_rx_fifo_rdusewd_o(phy_rx_fifo_rdusewd),
-        .Customized_PHY_Top_q0_ln0_rx_fifo_aempty_o(phy_rx_fifo_aempty),
-        .Customized_PHY_Top_q0_ln0_rx_fifo_empty_o (phy_rx_fifo_empty),
-        .Customized_PHY_Top_q0_ln0_rx_valid_o      (phy_rx_valid),
+wire [LANE_WIDTH-1:0] gt_pcs_tx_clk;
+wire [LANE_WIDTH-1:0] gt_pcs_rx_clk;
+wire                  gt_pll_ok;
 
-        .Customized_PHY_Top_q0_ln0_tx_pcs_clkout_o (phy_tx_pcs_clkout),
-        .Customized_PHY_Top_q0_ln0_tx_fifo_wrusewd_o(phy_tx_fifo_wrusewd),
-        .Customized_PHY_Top_q0_ln0_tx_fifo_afull_o (phy_tx_fifo_afull),
-        .Customized_PHY_Top_q0_ln0_tx_fifo_full_o  (phy_tx_fifo_full),
+wire [LANE_WIDTH-1:0] gt_rx_align_link;
+wire [LANE_WIDTH-1:0] gt_rx_pma_lock;
+wire [LANE_WIDTH-1:0] gt_rx_k_lock;
 
-        .Customized_PHY_Top_q0_ln0_refclk_o        (phy_refclk),
-        .Customized_PHY_Top_q0_ln0_signal_detect_o (phy_signal_detect),
-        .Customized_PHY_Top_q0_ln0_rx_cdr_lock_o   (phy_rx_cdr_lock),
-        .Customized_PHY_Top_q0_ln0_pll_lock_o      (phy_pll_lock),
-        .Customized_PHY_Top_q0_ln0_ready_o         (phy_ready),
+wire                  link_reset;
+wire                  sys_reset;
 
-        .Customized_PHY_Top_q0_ln0_rx_clk_i        (phy_rx_clk),
-        .Customized_PHY_Top_q0_ln0_rx_fifo_rden_i  (phy_rx_fifo_rden),
-        .Customized_PHY_Top_q0_ln0_tx_clk_i        (phy_tx_clk),
-        .Customized_PHY_Top_q0_ln0_tx_data_i       (phy_tx_data),
-        .Customized_PHY_Top_q0_ln0_tx_fifo_wren_i  (phy_tx_fifo_wren),
-        .Customized_PHY_Top_q0_ln0_pma_rstn_i      (phy_pma_rstn),
-        .Customized_PHY_Top_q0_ln0_pcs_rx_rst_i    (phy_pcs_rx_rst),
-        .Customized_PHY_Top_q0_ln0_pcs_tx_rst_i    (phy_pcs_tx_rst)
-    );
+//==============================================================================
+// 3) 最小 TX/RX 测试逻辑
+//==============================================================================
+reg  [31:0] tx_counter;
+reg  [7:0]  tx_beat_cnt;
+
+reg         channel_up_1d;
+reg         rx_seen_valid;
+reg         rx_seen_last;
+reg         rx_activity_toggle;
+reg         test_pass;
+
+// 为了方便观察，保留少量“sticky”错误标志
+reg         hard_err_seen;
+reg         soft_err_seen;
+reg         frame_err_seen;
+reg         crc_err_seen;
+
+//==============================================================================
+// 4) 顶层固定连接
+//==============================================================================
+// assign sfp1_tx_disable_o = 1'b0;     //15k板子此接口已经固定低电平
+// assign sfp2_tx_disable_o = 1'b0;
+
+// LED 定义：
+// LED0: cfg PLL lock
+// LED1: GT PLL lock
+// LED2: channel_up
+// LED3: test_pass
+// assign led_o[0]          = cfg_pll_lock;
+// assign led_o[1]          = gt_pll_ok;
+// assign led_o[2]          = channel_up_1d;
+// assign led_o[3]          = test_pass;
+
+assign led         = test_pass;
+
+// 保持与官方参考 top 一致的关键骨架
+assign sys_clk           = gt_pcs_tx_clk[0];
+
+// 这一版不再通过寄存器软件控制 GT/PCS 复位，全部固定为 0
+assign gt_reset          = 1'b0;
+assign gt_pcs_tx_reset   = 1'b0;
+assign gt_pcs_rx_reset   = 1'b0;
+
+// 删除 reg_rst，直接使用官方参考思路的精简版
+assign sys_reset_gen     = cfg_pll_lock & gt_pll_ok & rst_n;
+
+//==============================================================================
+// 5) 配置时钟与复位生成
+//==============================================================================
+Gowin_PLL u_Gowin_PLL
+(
+    .reset      ( !rst_n     ),
+    .lock       ( cfg_pll_lock  ),
+    .clkout0    ( cfg_clk       ),
+    .mdclk      (clk), //input  mdclk
+    .clkin      ( clk     )
+);
+
+reset_gen u1_reset_gen
+(
+   .i_clk1     ( cfg_clk       ),
+   .i_lock     ( cfg_pll_lock  ),
+   .o_rst1     ( cfg_rst       )
+);
+
+reset_gen u2_reset_gen
+(
+    .i_clk1     ( sys_clk       ),
+    .i_lock     ( sys_reset_gen ),
+    .o_rst1     ( sys_rst       )
+);
+
+//==============================================================================
+// 6) 最小合法 Framing 发送器
+//------------------------------------------------------------------------------
+// 这版继续保持 Framing，因为官方参考工程这一套接口就是 Framing。
+// 每 FRAME_BEATS 个 beat 构成一帧：
+//   - user_tx_valid: 在 channel_up 后持续拉高
+//   - user_tx_last : 每帧最后一个握手 beat 拉高
+//   - user_tx_strb : 固定全有效
+//==============================================================================
+wire tx_active;
+wire tx_fire;
+
+assign tx_active     = channel_up_1d & (~sys_reset);
+assign tx_fire       = user_tx_valid & user_tx_ready;
+
+assign user_tx_valid = tx_active;
+assign user_tx_data  = tx_counter;
+assign user_tx_strb  = {STRB_WIDTH{1'b1}};
+assign user_tx_last  = tx_active & (tx_beat_cnt == FRAME_BEATS-1);
+
+always @(posedge sys_clk) begin
+    if (sys_reset) begin
+        tx_counter  <= 32'd0;
+        tx_beat_cnt <= 8'd0;
+    end
+    else if (!channel_up_1d) begin
+        tx_counter  <= 32'd0;
+        tx_beat_cnt <= 8'd0;
+    end
+    else if (tx_fire) begin
+        tx_counter <= tx_counter + 32'd1;
+
+        if (tx_beat_cnt == FRAME_BEATS-1)
+            tx_beat_cnt <= 8'd0;
+        else
+            tx_beat_cnt <= tx_beat_cnt + 8'd1;
+    end
+end
+
+//==============================================================================
+// 7) 最小 RX 观察逻辑
+//------------------------------------------------------------------------------
+// 这版不再关心“数据内容是否逐 beat 递增正确”，只关心：
+//   1. 是否收到了有效数据
+//   2. 是否收到了完整帧（user_rx_last）
+//   3. IP 是否报告了 hard/soft/frame/crc error
+//
+// test_pass 条件：
+//   - channel_up 已建立
+//   - 见到过 user_rx_valid
+//   - 见到过 user_rx_last
+//   - 没有任何 IP 级错误
+//==============================================================================
+always @(posedge sys_clk) begin
+    if (sys_reset) begin
+        channel_up_1d      <= 1'b0;
+        rx_seen_valid      <= 1'b0;
+        rx_seen_last       <= 1'b0;
+        rx_activity_toggle <= 1'b0;
+        test_pass          <= 1'b0;
+
+        hard_err_seen      <= 1'b0;
+        soft_err_seen      <= 1'b0;
+        frame_err_seen     <= 1'b0;
+        crc_err_seen       <= 1'b0;
+    end
+    else begin
+        channel_up_1d <= channel_up;
+
+        if (!channel_up_1d) begin
+            rx_seen_valid      <= 1'b0;
+            rx_seen_last       <= 1'b0;
+            rx_activity_toggle <= 1'b0;
+            test_pass          <= 1'b0;
+
+            hard_err_seen      <= 1'b0;
+            soft_err_seen      <= 1'b0;
+            frame_err_seen     <= 1'b0;
+            crc_err_seen       <= 1'b0;
+        end
+        else begin
+            if (user_rx_valid) begin
+                rx_seen_valid      <= 1'b1;
+                rx_activity_toggle <= ~rx_activity_toggle;
+            end
+
+            if (user_rx_valid && user_rx_last)
+                rx_seen_last <= 1'b1;
+
+            if (hard_err)
+                hard_err_seen <= 1'b1;
+
+            if (soft_err)
+                soft_err_seen <= 1'b1;
+
+            if (frame_err)
+                frame_err_seen <= 1'b1;
+
+            if (crc_valid && !crc_pass_fail_n)
+                crc_err_seen <= 1'b1;
+
+            if (channel_up_1d &&
+                rx_seen_valid &&
+                rx_seen_last &&
+                !hard_err_seen &&
+                !soft_err_seen &&
+                !frame_err_seen &&
+                !crc_err_seen) begin
+                test_pass <= 1'b1;
+            end
+        end
+    end
+end
+
+//==============================================================================
+// 8) ILA 观测信号（统一 ila_ 前缀）
+//==============================================================================
+ wire [31:0] ila_top_version       = TOP_VERSION;
+
+ wire        ila_cfg_clk           = cfg_clk;
+ wire        ila_cfg_pll_lock      = cfg_pll_lock;
+ wire        ila_cfg_rst           = cfg_rst;
+
+ wire        ila_sys_clk           = sys_clk;
+ wire        ila_sys_reset_gen     = sys_reset_gen;
+ wire        ila_sys_rst           = sys_rst;
+ wire        ila_sys_reset         = sys_reset;
+ wire        ila_link_reset        = link_reset;
+
+ wire        ila_gt_reset          = gt_reset;
+ wire        ila_gt_pcs_tx_reset   = gt_pcs_tx_reset;
+ wire        ila_gt_pcs_rx_reset   = gt_pcs_rx_reset;
+ wire        ila_gt_pll_ok         = gt_pll_ok;
+
+ wire [LANE_WIDTH-1:0] ila_gt_pcs_tx_clk    = gt_pcs_tx_clk;
+ wire [LANE_WIDTH-1:0] ila_gt_pcs_rx_clk    = gt_pcs_rx_clk;
+ wire [LANE_WIDTH-1:0] ila_gt_rx_pma_lock   = gt_rx_pma_lock;
+ wire [LANE_WIDTH-1:0] ila_gt_rx_k_lock     = gt_rx_k_lock;
+ wire [LANE_WIDTH-1:0] ila_gt_rx_align_link = gt_rx_align_link;
+
+ wire        ila_channel_up        = channel_up;
+ wire [LANE_WIDTH-1:0] ila_lane_up = lane_up;
+ wire        ila_channel_up_1d     = channel_up_1d;
+
+ wire [DATA_WIDTH-1:0] ila_user_tx_data  = user_tx_data;
+ wire [STRB_WIDTH-1:0] ila_user_tx_strb  = user_tx_strb;
+ wire                  ila_user_tx_valid = user_tx_valid;
+ wire                  ila_user_tx_last  = user_tx_last;
+ wire                  ila_user_tx_ready = user_tx_ready;
+ wire                  ila_tx_fire       = tx_fire;
+ wire [7:0]            ila_tx_beat_cnt   = tx_beat_cnt;
+ wire [31:0]           ila_tx_counter    = tx_counter;
+
+ wire [DATA_WIDTH-1:0] ila_user_rx_data  = user_rx_data;
+ wire [STRB_WIDTH-1:0] ila_user_rx_strb  = user_rx_strb;
+ wire                  ila_user_rx_valid = user_rx_valid;
+ wire                  ila_user_rx_last  = user_rx_last;
+
+ wire                  ila_crc_valid       = crc_valid;
+ wire                  ila_crc_pass_fail_n = crc_pass_fail_n;
+ wire                  ila_hard_err        = hard_err;
+ wire                  ila_soft_err        = soft_err;
+ wire                  ila_frame_err       = frame_err;
+
+ wire                  ila_rx_seen_valid      = rx_seen_valid;
+ wire                  ila_rx_seen_last       = rx_seen_last;
+ wire                  ila_rx_activity_toggle = rx_activity_toggle;
+ wire                  ila_hard_err_seen      = hard_err_seen;
+ wire                  ila_soft_err_seen      = soft_err_seen;
+ wire                  ila_frame_err_seen     = frame_err_seen;
+ wire                  ila_crc_err_seen       = crc_err_seen;
+ wire                  ila_test_pass          = test_pass;
+
+//==============================================================================
+// 9) SerDes_Top 实例
+//==============================================================================
+SerDes_Top u_SerDes_Top
+(
+    // --------- Clock & Reset
+    .RoraLink_8B10B_Top_reset_i               ( sys_rst            ),
+    .RoraLink_8B10B_Top_user_clk_i            ( sys_clk            ),
+    .RoraLink_8B10B_Top_init_clk_i            ( cfg_clk            ),
+    .RoraLink_8B10B_Top_user_pll_locked_i     ( gt_pll_ok          ),
+
+    .RoraLink_8B10B_Top_link_reset_o          ( link_reset         ),
+    .RoraLink_8B10B_Top_sys_reset_o           ( sys_reset          ),
+
+    // --------- user TX interface
+    .RoraLink_8B10B_Top_user_tx_data_i        ( user_tx_data       ),
+    .RoraLink_8B10B_Top_user_tx_valid_i       ( user_tx_valid      ),
+    .RoraLink_8B10B_Top_user_tx_ready_o       ( user_tx_ready      ),
+    .RoraLink_8B10B_Top_user_tx_strb_i        ( user_tx_strb       ),
+    .RoraLink_8B10B_Top_user_tx_last_i        ( user_tx_last       ),
+
+    // --------- user RX interface
+    .RoraLink_8B10B_Top_user_rx_data_o        ( user_rx_data       ),
+    .RoraLink_8B10B_Top_user_rx_valid_o       ( user_rx_valid      ),
+    .RoraLink_8B10B_Top_user_rx_strb_o        ( user_rx_strb       ),
+    .RoraLink_8B10B_Top_user_rx_last_o        ( user_rx_last       ),
+
+    .RoraLink_8B10B_Top_crc_pass_fail_n_o     ( crc_pass_fail_n    ),
+    .RoraLink_8B10B_Top_crc_valid_o           ( crc_valid          ),
+
+    // --------- Status
+    .RoraLink_8B10B_Top_hard_err_o            ( hard_err           ),
+    .RoraLink_8B10B_Top_soft_err_o            ( soft_err           ),
+    .RoraLink_8B10B_Top_frame_err_o           ( frame_err          ),
+
+    .RoraLink_8B10B_Top_channel_up_o          ( channel_up         ),
+    .RoraLink_8B10B_Top_lane_up_o             ( lane_up            ),
+
+    // --------- SerDes
+    .RoraLink_8B10B_Top_gt_pcs_tx_reset_i     ( gt_pcs_tx_reset    ),
+    .RoraLink_8B10B_Top_gt_pcs_tx_clk_o       ( gt_pcs_tx_clk      ),
+
+    .RoraLink_8B10B_Top_gt_pcs_rx_reset_i     ( gt_pcs_rx_reset    ),
+    .RoraLink_8B10B_Top_gt_rx_align_link_o    ( gt_rx_align_link   ),
+    .RoraLink_8B10B_Top_gt_rx_pma_lock_o      ( gt_rx_pma_lock     ),
+    .RoraLink_8B10B_Top_gt_rx_k_lock_o        ( gt_rx_k_lock       ),
+    .RoraLink_8B10B_Top_gt_pcs_rx_clk_o       ( gt_pcs_rx_clk      ),
+
+    .RoraLink_8B10B_Top_gt_reset_i            ( gt_reset           ),
+    .RoraLink_8B10B_Top_gt_pll_lock_o         ( gt_pll_ok          )
+);
 
 endmodule
+

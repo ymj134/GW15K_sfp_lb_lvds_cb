@@ -11,13 +11,19 @@
 
 
 -global_reset disable
--protocol_module_name0 Customized_PHY_Top
--Customized_PHY_Topprotocol_module_type customized
--Customized_PHY_TopQ0Lane0 true
--Customized_PHY_TopClock_Correction None
--Customized_PHY_TopWord_Alignment false
--Customized_PHY_TopRX_Channel_Bonding None
--Customized_PHY_TopEnableDRP false
--Customized_PHY_TopDRPPorts false
--Customized_PHY_TopTX_Encoding_Mode OFF
--Customized_PHY_TopRX_Decoding_Mode OFF
+-protocol_module_name0 RoraLink_8B10B_Top
+-RoraLink_8B10B_Topprotocol_module_type roralink8b10b
+-RoraLink_8B10B_TopReferenceClockSource Q0REFCLK0
+-RoraLink_8B10B_TopPLLSource CPLL
+-RoraLink_8B10B_TopDataWidthPerLane 4
+-RoraLink_8B10B_TopNumberoflanes 1
+-RoraLink_8B10B_TopDataFlowMode Duplex
+-RoraLink_8B10B_TopInterface Framing
+-RoraLink_8B10B_TopFlowControl None
+-RoraLink_8B10B_TopBackChannel Sidebands
+-RoraLink_8B10B_TopLittleEndianSupport true
+-RoraLink_8B10B_TopCRC true
+-RoraLink_8B10B_TopEnableDRP false
+-RoraLink_8B10B_TopDRPPorts false
+-RoraLink_8B10B_TopQ0Lane0 true
+-RoraLink_8B10B_TopChannel0Selection Q0Lane0

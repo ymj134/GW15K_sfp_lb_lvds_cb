@@ -26,6 +26,8 @@
         <File path="src/video_symbol_unpacker_v1.v" type="file.verilog" enable="1"/>
         <File path="src/fpga_project.cst" type="file.cst" enable="1"/>
         <File path="src/fpga_project.sdc" type="file.sdc" enable="1"/>
+        <File path="src/Customized.rao" type="file.gao" enable="0"/>
+        <File path="src/Customized1.rao" type="file.gao" enable="0"/>
         <File path="src/fpga_project.rao" type="file.gao" enable="0"/>
         <File path="src/ila1.rao" type="file.gao" enable="0"/>
         <File path="src/ila3.rao" type="file.gao" enable="0"/>
