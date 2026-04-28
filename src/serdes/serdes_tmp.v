@@ -6,7 +6,7 @@
 //Part Number: GW5AT-LV15MG132C1/I0
 //Device: GW5AT-15
 //Device Version: B
-//Created Time: Tue Apr 28 17:09:47 2026
+//Created Time: Tue Apr 28 17:24:38 2026
 
 //Change the instance name and port connections to the signal names
 //--------Copy here to design--------
@@ -27,10 +27,6 @@
         .RoraLink_8B10B_Top_user_tx_strb_i(RoraLink_8B10B_Top_user_tx_strb_i), //input [3:0] RoraLink_8B10B_Top_user_tx_strb_i
         .RoraLink_8B10B_Top_user_tx_valid_i(RoraLink_8B10B_Top_user_tx_valid_i), //input RoraLink_8B10B_Top_user_tx_valid_i
         .RoraLink_8B10B_Top_user_tx_last_i(RoraLink_8B10B_Top_user_tx_last_i), //input RoraLink_8B10B_Top_user_tx_last_i
-        .RoraLink_8B10B_Top_tx_aligned_i(RoraLink_8B10B_Top_tx_aligned_i), //input RoraLink_8B10B_Top_tx_aligned_i
-        .RoraLink_8B10B_Top_tx_bonded_i(RoraLink_8B10B_Top_tx_bonded_i), //input RoraLink_8B10B_Top_tx_bonded_i
-        .RoraLink_8B10B_Top_tx_verify_i(RoraLink_8B10B_Top_tx_verify_i), //input RoraLink_8B10B_Top_tx_verify_i
-        .RoraLink_8B10B_Top_tx_reset_i(RoraLink_8B10B_Top_tx_reset_i), //input RoraLink_8B10B_Top_tx_reset_i
         .RoraLink_8B10B_Top_gt_reset_i(RoraLink_8B10B_Top_gt_reset_i), //input RoraLink_8B10B_Top_gt_reset_i
         .RoraLink_8B10B_Top_gt_pcs_tx_reset_i(RoraLink_8B10B_Top_gt_pcs_tx_reset_i) //input RoraLink_8B10B_Top_gt_pcs_tx_reset_i
     );

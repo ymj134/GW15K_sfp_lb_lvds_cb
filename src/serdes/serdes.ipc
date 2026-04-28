@@ -18,7 +18,7 @@ Q0_LANE0_TX=Q0_LANE0_TX -> Q0_QPLL0 -> Q0_MUX0 -> Q0_REFCLK0
 [RoraLink%208B10B%3Aroralink_8b10b%3ARoraLink_8B10B_Top]
 ATT=7
 BOOST=9
-Back_Channel=Sidebands
+Back_Channel=Timer
 CRC=true
 CTC_Selection=SerDes
 ChannelSel0=Q0 Lane0
@@ -29,7 +29,7 @@ ChannelSel4=Q0 Lane0
 ChannelSel5=Q0 Lane0
 ChannelSel6=Q0 Lane0
 ChannelSel7=Q0 Lane0
-Clock_Source=lane
+Clock_Source=quad
 DIFFERENTIAL_SWING=900mV
 DRP_Ports=false
 Data_Width_Per_Lane=4

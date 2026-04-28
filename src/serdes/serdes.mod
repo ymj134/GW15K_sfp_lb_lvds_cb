@@ -20,7 +20,7 @@
 -RoraLink_8B10B_TopDataFlowMode TX-onlySimplex
 -RoraLink_8B10B_TopInterface Framing
 -RoraLink_8B10B_TopFlowControl None
--RoraLink_8B10B_TopBackChannel Sidebands
+-RoraLink_8B10B_TopBackChannel Timer
 -RoraLink_8B10B_TopLittleEndianSupport true
 -RoraLink_8B10B_TopCRC true
 -RoraLink_8B10B_TopEnableDRP false

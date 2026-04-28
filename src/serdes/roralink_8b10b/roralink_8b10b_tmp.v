@@ -5,7 +5,7 @@
 //Part Number: GW5AT-LV15MG132C1/I0
 //Device: GW5AT-15
 //Device Version: B
-//Created Time: Tue Apr 28 17:09:46 2026
+//Created Time: Tue Apr 28 17:24:38 2026
 
 //Change the instance name and port connections to the signal names
 //--------Copy here to design--------
@@ -24,10 +24,6 @@
 		.hard_err_o(hard_err_o), //output hard_err_o
 		.channel_up_o(channel_up_o), //output channel_up_o
 		.lane_up_o(lane_up_o), //output [0:0] lane_up_o
-		.tx_aligned_i(tx_aligned_i), //input tx_aligned_i
-		.tx_bonded_i(tx_bonded_i), //input tx_bonded_i
-		.tx_verify_i(tx_verify_i), //input tx_verify_i
-		.tx_reset_i(tx_reset_i), //input tx_reset_i
 		.gt_reset_i(gt_reset_i), //input gt_reset_i
 		.gt_pcs_tx_reset_i(gt_pcs_tx_reset_i), //input gt_pcs_tx_reset_i
 		.gt_pcs_tx_clk_o(gt_pcs_tx_clk_o), //output [0:0] gt_pcs_tx_clk_o
