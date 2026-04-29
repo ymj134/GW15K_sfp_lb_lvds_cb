@@ -6,36 +6,35 @@
 //Part Number: GW5AT-LV15MG132C1/I0
 //Device: GW5AT-15
 //Device Version: B
-//Created Time: Wed Apr 29 09:58:05 2026
+//Created Time: Wed Apr 29 11:14:54 2026
 
 //Change the instance name and port connections to the signal names
 //--------Copy here to design--------
 
     SerDes_Top your_instance_name(
-        .RoraLink_8B10B_Top_link_reset_o(RoraLink_8B10B_Top_link_reset_o), //output RoraLink_8B10B_Top_link_reset_o
-        .RoraLink_8B10B_Top_sys_reset_o(RoraLink_8B10B_Top_sys_reset_o), //output RoraLink_8B10B_Top_sys_reset_o
-        .RoraLink_8B10B_Top_user_rx_data_o(RoraLink_8B10B_Top_user_rx_data_o), //output [31:0] RoraLink_8B10B_Top_user_rx_data_o
-        .RoraLink_8B10B_Top_user_rx_strb_o(RoraLink_8B10B_Top_user_rx_strb_o), //output [3:0] RoraLink_8B10B_Top_user_rx_strb_o
-        .RoraLink_8B10B_Top_user_rx_valid_o(RoraLink_8B10B_Top_user_rx_valid_o), //output RoraLink_8B10B_Top_user_rx_valid_o
-        .RoraLink_8B10B_Top_user_rx_last_o(RoraLink_8B10B_Top_user_rx_last_o), //output RoraLink_8B10B_Top_user_rx_last_o
-        .RoraLink_8B10B_Top_crc_pass_fail_n_o(RoraLink_8B10B_Top_crc_pass_fail_n_o), //output RoraLink_8B10B_Top_crc_pass_fail_n_o
-        .RoraLink_8B10B_Top_crc_valid_o(RoraLink_8B10B_Top_crc_valid_o), //output RoraLink_8B10B_Top_crc_valid_o
-        .RoraLink_8B10B_Top_hard_err_o(RoraLink_8B10B_Top_hard_err_o), //output RoraLink_8B10B_Top_hard_err_o
-        .RoraLink_8B10B_Top_soft_err_o(RoraLink_8B10B_Top_soft_err_o), //output RoraLink_8B10B_Top_soft_err_o
-        .RoraLink_8B10B_Top_frame_err_o(RoraLink_8B10B_Top_frame_err_o), //output RoraLink_8B10B_Top_frame_err_o
-        .RoraLink_8B10B_Top_channel_up_o(RoraLink_8B10B_Top_channel_up_o), //output RoraLink_8B10B_Top_channel_up_o
-        .RoraLink_8B10B_Top_lane_up_o(RoraLink_8B10B_Top_lane_up_o), //output RoraLink_8B10B_Top_lane_up_o
-        .RoraLink_8B10B_Top_gt_pcs_rx_clk_o(RoraLink_8B10B_Top_gt_pcs_rx_clk_o), //output RoraLink_8B10B_Top_gt_pcs_rx_clk_o
-        .RoraLink_8B10B_Top_gt_pll_lock_o(RoraLink_8B10B_Top_gt_pll_lock_o), //output RoraLink_8B10B_Top_gt_pll_lock_o
-        .RoraLink_8B10B_Top_gt_rx_align_link_o(RoraLink_8B10B_Top_gt_rx_align_link_o), //output RoraLink_8B10B_Top_gt_rx_align_link_o
-        .RoraLink_8B10B_Top_gt_rx_pma_lock_o(RoraLink_8B10B_Top_gt_rx_pma_lock_o), //output RoraLink_8B10B_Top_gt_rx_pma_lock_o
-        .RoraLink_8B10B_Top_gt_rx_k_lock_o(RoraLink_8B10B_Top_gt_rx_k_lock_o), //output RoraLink_8B10B_Top_gt_rx_k_lock_o
-        .RoraLink_8B10B_Top_user_clk_i(RoraLink_8B10B_Top_user_clk_i), //input RoraLink_8B10B_Top_user_clk_i
-        .RoraLink_8B10B_Top_init_clk_i(RoraLink_8B10B_Top_init_clk_i), //input RoraLink_8B10B_Top_init_clk_i
-        .RoraLink_8B10B_Top_reset_i(RoraLink_8B10B_Top_reset_i), //input RoraLink_8B10B_Top_reset_i
-        .RoraLink_8B10B_Top_user_pll_locked_i(RoraLink_8B10B_Top_user_pll_locked_i), //input RoraLink_8B10B_Top_user_pll_locked_i
-        .RoraLink_8B10B_Top_gt_reset_i(RoraLink_8B10B_Top_gt_reset_i), //input RoraLink_8B10B_Top_gt_reset_i
-        .RoraLink_8B10B_Top_gt_pcs_rx_reset_i(RoraLink_8B10B_Top_gt_pcs_rx_reset_i) //input RoraLink_8B10B_Top_gt_pcs_rx_reset_i
+        .Customized_PHY_Top_q0_ln0_rx_pcs_clkout_o(Customized_PHY_Top_q0_ln0_rx_pcs_clkout_o), //output Customized_PHY_Top_q0_ln0_rx_pcs_clkout_o
+        .Customized_PHY_Top_q0_ln0_rx_data_o(Customized_PHY_Top_q0_ln0_rx_data_o), //output [87:0] Customized_PHY_Top_q0_ln0_rx_data_o
+        .Customized_PHY_Top_q0_ln0_rx_fifo_rdusewd_o(Customized_PHY_Top_q0_ln0_rx_fifo_rdusewd_o), //output [4:0] Customized_PHY_Top_q0_ln0_rx_fifo_rdusewd_o
+        .Customized_PHY_Top_q0_ln0_rx_fifo_aempty_o(Customized_PHY_Top_q0_ln0_rx_fifo_aempty_o), //output Customized_PHY_Top_q0_ln0_rx_fifo_aempty_o
+        .Customized_PHY_Top_q0_ln0_rx_fifo_empty_o(Customized_PHY_Top_q0_ln0_rx_fifo_empty_o), //output Customized_PHY_Top_q0_ln0_rx_fifo_empty_o
+        .Customized_PHY_Top_q0_ln0_rx_valid_o(Customized_PHY_Top_q0_ln0_rx_valid_o), //output Customized_PHY_Top_q0_ln0_rx_valid_o
+        .Customized_PHY_Top_q0_ln0_tx_pcs_clkout_o(Customized_PHY_Top_q0_ln0_tx_pcs_clkout_o), //output Customized_PHY_Top_q0_ln0_tx_pcs_clkout_o
+        .Customized_PHY_Top_q0_ln0_tx_fifo_wrusewd_o(Customized_PHY_Top_q0_ln0_tx_fifo_wrusewd_o), //output [4:0] Customized_PHY_Top_q0_ln0_tx_fifo_wrusewd_o
+        .Customized_PHY_Top_q0_ln0_tx_fifo_afull_o(Customized_PHY_Top_q0_ln0_tx_fifo_afull_o), //output Customized_PHY_Top_q0_ln0_tx_fifo_afull_o
+        .Customized_PHY_Top_q0_ln0_tx_fifo_full_o(Customized_PHY_Top_q0_ln0_tx_fifo_full_o), //output Customized_PHY_Top_q0_ln0_tx_fifo_full_o
+        .Customized_PHY_Top_q0_ln0_refclk_o(Customized_PHY_Top_q0_ln0_refclk_o), //output Customized_PHY_Top_q0_ln0_refclk_o
+        .Customized_PHY_Top_q0_ln0_signal_detect_o(Customized_PHY_Top_q0_ln0_signal_detect_o), //output Customized_PHY_Top_q0_ln0_signal_detect_o
+        .Customized_PHY_Top_q0_ln0_rx_cdr_lock_o(Customized_PHY_Top_q0_ln0_rx_cdr_lock_o), //output Customized_PHY_Top_q0_ln0_rx_cdr_lock_o
+        .Customized_PHY_Top_q0_ln0_pll_lock_o(Customized_PHY_Top_q0_ln0_pll_lock_o), //output Customized_PHY_Top_q0_ln0_pll_lock_o
+        .Customized_PHY_Top_q0_ln0_ready_o(Customized_PHY_Top_q0_ln0_ready_o), //output Customized_PHY_Top_q0_ln0_ready_o
+        .Customized_PHY_Top_q0_ln0_rx_clk_i(Customized_PHY_Top_q0_ln0_rx_clk_i), //input Customized_PHY_Top_q0_ln0_rx_clk_i
+        .Customized_PHY_Top_q0_ln0_rx_fifo_rden_i(Customized_PHY_Top_q0_ln0_rx_fifo_rden_i), //input Customized_PHY_Top_q0_ln0_rx_fifo_rden_i
+        .Customized_PHY_Top_q0_ln0_tx_clk_i(Customized_PHY_Top_q0_ln0_tx_clk_i), //input Customized_PHY_Top_q0_ln0_tx_clk_i
+        .Customized_PHY_Top_q0_ln0_tx_data_i(Customized_PHY_Top_q0_ln0_tx_data_i), //input [79:0] Customized_PHY_Top_q0_ln0_tx_data_i
+        .Customized_PHY_Top_q0_ln0_tx_fifo_wren_i(Customized_PHY_Top_q0_ln0_tx_fifo_wren_i), //input Customized_PHY_Top_q0_ln0_tx_fifo_wren_i
+        .Customized_PHY_Top_q0_ln0_pma_rstn_i(Customized_PHY_Top_q0_ln0_pma_rstn_i), //input Customized_PHY_Top_q0_ln0_pma_rstn_i
+        .Customized_PHY_Top_q0_ln0_pcs_rx_rst_i(Customized_PHY_Top_q0_ln0_pcs_rx_rst_i), //input Customized_PHY_Top_q0_ln0_pcs_rx_rst_i
+        .Customized_PHY_Top_q0_ln0_pcs_tx_rst_i(Customized_PHY_Top_q0_ln0_pcs_tx_rst_i) //input Customized_PHY_Top_q0_ln0_pcs_tx_rst_i
     );
 
 //--------Copy end-------------------
