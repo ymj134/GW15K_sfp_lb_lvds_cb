@@ -1,5 +1,5 @@
-parameter q0_ln0_tx_rate = 1.25;
-parameter q0_ln0_rx_rate = 1.25;
+parameter q0_ln0_tx_rate = 3.125;
+parameter q0_ln0_rx_rate = 3.125;
 parameter q0_ln0_refclk_source = 0;
 parameter q0_ln0_pll_sel = 2;
 parameter q0_ln0_loopback_mode = "off";

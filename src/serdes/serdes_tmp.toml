@@ -33,10 +33,10 @@ refmux_scheme = "USER_DEFINED"
 [q0.ln0]
 chbond_trigger_by_fabric = true
 enable = true
-tx_data_rate = "1.25G"
+tx_data_rate = "3.125G"
 tx_ovs_mode = "OFF"
 tx_ovs_ratio = "N/A"
-rx_data_rate = "1.25G"
+rx_data_rate = "3.125G"
 pcs_tx_clk_src = 0
 loopBack = "OFF"
 width_mode = 8
